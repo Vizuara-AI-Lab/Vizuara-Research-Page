@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
 images: {
 remotePatterns: [
 { protocol: 'https', hostname: 'images.unsplash.com' },
+{ protocol: 'https', hostname: 'firebasestorage.googleapis.com' },
 { protocol: 'https', hostname: 'i0.wp.com' },
 { protocol: 'https', hostname: 'research.vizuara.ai' },
 { protocol: 'https', hostname: 'arxiv.org' },

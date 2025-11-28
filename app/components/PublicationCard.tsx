@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 interface PublicationCardProps {
   title: string;
@@ -28,7 +28,9 @@ export default function PublicationCard({
   tags = [],
 }: PublicationCardProps) {
   // If imageUrl is provided, run it through the proxy to avoid mixed-content
-  const [thumb, setThumb] = useState<string | undefined>(() => proxify(imageUrl));
+  const [thumb, setThumb] = useState<string | undefined>(() =>
+    proxify(imageUrl)
+  );
   const [asked, setAsked] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
 
@@ -52,7 +54,8 @@ export default function PublicationCard({
             .then((r) => r.json())
             .then((j) => {
               // Prefer proxyUrl; otherwise proxy the raw imageUrl
-              const next: string | undefined = j?.proxyUrl || proxify(j?.imageUrl);
+              const next: string | undefined =
+                j?.proxyUrl || proxify(j?.imageUrl);
               if (next) setThumb(next);
             })
             .catch(() => {
@@ -61,7 +64,7 @@ export default function PublicationCard({
             .finally(() => io.disconnect());
         }
       },
-      { rootMargin: '200px 0px' }
+      { rootMargin: "200px 0px" }
     );
 
     io.observe(el);
@@ -69,11 +72,11 @@ export default function PublicationCard({
   }, [paperLink, title, thumb, asked]);
 
   const wrapperClass = isHighlighted
-    ? 'border-l border-vblue bg-gradient-to-br from-blue-50/30 to-transparent hover:from-blue-50/50'
-    : 'border-l border-gray-300 hover:border-vblue';
+    ? "border-l border-vblue bg-gradient-to-br from-blue-50/30 to-transparent hover:from-blue-50/50"
+    : "border-l border-gray-300 hover:border-vblue";
 
   const Thumb = (
-    <div className="w-20 h-20 shrink-0 overflow-hidden bg-gray-100">
+    <div className="w-26 h-24 shrink-0 overflow-hidden bg-gray-100">
       {thumb ? (
         <img
           src={thumb}
@@ -83,13 +86,18 @@ export default function PublicationCard({
           referrerPolicy="no-referrer"
         />
       ) : (
-        <div className="w-full h-full grid place-items-center text-gray-400 text-lg">🧪</div>
+        <div className="w-full h-full grid place-items-center text-gray-400 text-lg">
+          🧪
+        </div>
       )}
     </div>
   );
 
   return (
-    <div className={`${wrapperClass} transition-colors overflow-hidden`} ref={ref}>
+    <div
+      className={`${wrapperClass} transition-colors overflow-hidden`}
+      ref={ref}
+    >
       <div className="p-6 flex gap-4 min-h-[120px]">
         <div className="flex-1 flex flex-col justify-between">
           <div>
@@ -97,7 +105,9 @@ export default function PublicationCard({
 
             {/* Authors */}
             {authors && (
-              <p className="text-gray-600 mb-2 font-light text-sm">Authors: {authors}</p>
+              <p className="text-gray-600 mb-2 font-light text-sm">
+                Authors: {authors}
+              </p>
             )}
 
             {/* Topic tags (click to filter) */}

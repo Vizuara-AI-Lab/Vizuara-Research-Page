@@ -92,6 +92,8 @@ export default function PublicationsSection({
     updateUrl(selectedTags, val);
   };
 
+  
+
   // Filter publications: search in title, venue, tags; require all selected tags
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
