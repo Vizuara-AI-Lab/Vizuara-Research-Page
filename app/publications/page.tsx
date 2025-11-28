@@ -5,7 +5,7 @@ export const revalidate = 3600;
 
 async function getPubs() {
   // In dev, relative fetch works
-  const res = await fetch("http://localhost:3000/api/pubs", {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/pubs`, {
     cache: "no-store",
   });
   if (!res.ok) return { publications: [] };

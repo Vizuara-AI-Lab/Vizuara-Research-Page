@@ -45,15 +45,28 @@ const slugify = (s: string) =>
     .replace(/\s+/g, "-")
     .slice(0, 60);
 
+// Wrapper: only auth/admin hooks here; all other hooks live in AdminPanel
 export default function AdminPage() {
-  // -----------------------------
-  // 🔐 AUTH GUARD
-  // -----------------------------
-  const { user, loading, admin, signIn, logOut, getToken } = useAuth();
+  const [tagsInput, setTagsInput] = useState("");
 
-  if (loading) return <div className="p-6">Loading…</div>;
+  // Ensure your useAuth returns: { user, loading, admin, adminLoading, adminChecked, signIn, logOut, getToken }
+  const {
+    user,
+    loading,
+    admin,
+    adminLoading,
+    adminChecked,
+    signIn,
+    logOut,
+    getToken,
+  } = useAuth() as any;
 
-  // Not logged in → show Sign In
+  // Wait for both auth and admin checks before deciding
+  if (loading || adminLoading || !adminChecked) {
+    return <div className="p-6">Checking access…</div>;
+  }
+
+  // Not signed in
   if (!user) {
     return (
       <div className="p-6 space-y-4">
@@ -68,26 +81,47 @@ export default function AdminPage() {
     );
   }
 
-  // Logged in but NOT admin → show Access Denied THEN redirect
+  // Signed in but not admin
   if (!admin?.isAdmin) {
-    if (typeof window !== "undefined") {
-      setTimeout(() => {
-        logOut();
-        window.location.href = "/";
-      }, 200000);
-    }
-
     return (
       <div className="p-6 space-y-4">
-        <h1 className="text-xl text-red-600">Access Denied</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl text-red-600">Access Denied</h1>
+          <div className="text-sm flex items-center gap-3">
+            <span className="text-gray-600">{user.email}</span>
+            <button className="underline" onClick={logOut}>
+              Sign out
+            </button>
+          </div>
+        </div>
         <p>You are not authorized to access the admin panel.</p>
+        <a href="/" className="underline text-vblue">
+          Go to home →
+        </a>
       </div>
     );
   }
 
-  // -----------------------------
-  // 📌 ADMIN ONLY FROM HERE
-  // -----------------------------
+  // Authorized → render full panel (all hooks live inside this child)
+  return (
+    <AdminPanel
+      userEmail={user.email || ""}
+      getToken={getToken}
+      logOut={logOut}
+    />
+  );
+}
+
+// Full UI + hooks live here (mounted only for admins)
+function AdminPanel({
+  userEmail,
+  getToken,
+  logOut,
+}: {
+  userEmail: string;
+  getToken: () => Promise<string | undefined>;
+  logOut: () => void | Promise<void>;
+}) {
   const [items, setItems] = useState<Pub[]>([]);
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -108,10 +142,6 @@ export default function AdminPage() {
     published: true,
   });
 
-  // -----------------------------
-  // FUNCTIONS
-  // -----------------------------
-
   function resetForm() {
     setEditingId(null);
     setForm({
@@ -131,8 +161,12 @@ export default function AdminPage() {
 
   const load = async () => {
     const res = await fetch("/api/pubs", { cache: "no-store" });
-    const j = await res.json();
-    setItems(j.publications || []);
+    const j = await res.json().catch(() => ({ publications: [] }));
+    const list = (j.publications || []).map((p: any) => ({
+      ...p,
+      tags: toTags(p.tags),
+    })) as Pub[];
+    setItems(list);
   };
 
   useEffect(() => {
@@ -143,22 +177,24 @@ export default function AdminPage() {
     const q = search.toLowerCase().trim();
     if (!q) return items;
     return items.filter((p) =>
-      `${p.title} ${p.authors} ${p.venue} ${p.tags?.join(" ")}`
+      `${p.title} ${p.authors || ""} ${p.venue || ""} ${toTags(p.tags).join(
+        " "
+      )}`
         .toLowerCase()
         .includes(q)
     );
   }, [items, search]);
 
   function startEdit(p: Pub) {
+    const safeTags = toTags(p.tags);
     setEditingId(p.id!);
-    setForm({ ...p });
+    setForm({ ...p, tags: toTags(p.tags) });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handlePickFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (!file.type.startsWith("image/")) return alert("Select an image");
 
     setUploading(true);
@@ -181,22 +217,26 @@ export default function AdminPage() {
         setUploading(false);
       },
       async () => {
+        if (form.imagePath && form.imagePath !== path) {
+          try {
+            await deleteObject(ref(storage, form.imagePath));
+          } catch {}
+        }
         const url = await getDownloadURL(task.snapshot.ref);
         setForm((f) => ({ ...f, imageUrl: url, imagePath: path }));
         setUploading(false);
       }
     );
+
+    e.currentTarget.value = "";
   }
 
   async function removeImage() {
-    if (!form.imagePath) {
-      setForm((f) => ({ ...f, imageUrl: "", imagePath: "" }));
-      return;
+    if (form.imagePath) {
+      try {
+        await deleteObject(ref(storage, form.imagePath));
+      } catch {}
     }
-
-    try {
-      await deleteObject(ref(storage, form.imagePath));
-    } catch {}
     setForm((f) => ({ ...f, imageUrl: "", imagePath: "" }));
   }
 
@@ -204,7 +244,26 @@ export default function AdminPage() {
     try {
       setSaving(true);
       const token = await getToken();
-      const payload = { ...form, tags: toTags(form.tags || []) };
+      if (!token) {
+        alert("Please sign in with an admin account.");
+        return;
+      }
+      if (!form.title.trim()) {
+        alert("Title is required.");
+        return;
+      }
+
+      const payload: Pub = {
+        title: form.title.trim(),
+        authors: (form.authors || "").trim(),
+        venue: (form.venue || "").trim(),
+        year: form.year ? Number(form.year) : null,
+        paperLink: (form.paperLink || "").trim(),
+        imageUrl: (form.imageUrl || "").trim(),
+        imagePath: (form.imagePath || "").trim(),
+        tags: toTags(form.tags || []),
+        published: !!form.published,
+      };
 
       const method = editingId ? "PATCH" : "POST";
       const url = editingId ? `/api/pubs/${editingId}` : "/api/pubs";
@@ -222,6 +281,9 @@ export default function AdminPage() {
 
       await load();
       resetForm();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "Save failed");
     } finally {
       setSaving(false);
     }
@@ -230,33 +292,36 @@ export default function AdminPage() {
   async function del(id: string) {
     try {
       const token = await getToken();
+      if (!token) {
+        alert("Please sign in with an admin account.");
+        return;
+      }
       if (!confirm("Delete publication?")) return;
 
       setDeletingId(id);
-
       const res = await fetch(`/api/pubs/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!res.ok) throw new Error(await res.text());
 
       await load();
+      if (editingId === id) resetForm();
+    } catch (err: any) {
+      console.error(err);
+      alert(err?.message || "Delete failed");
     } finally {
       setDeletingId(null);
     }
   }
 
-  // -----------------------------
-  // UI
-  // -----------------------------
   return (
     <div className="p-6 space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-normal">Admin • Publications</h1>
         <div className="flex items-center gap-3 text-sm">
-          <span>{user?.email}</span>
+          <span>{userEmail}</span>
           <button className="underline" onClick={logOut}>
             Sign out
           </button>
@@ -279,7 +344,6 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Form Fields */}
         <div className="grid gap-3 md:grid-cols-2">
           {/* Title */}
           <div className="flex flex-col gap-1">
@@ -350,14 +414,14 @@ export default function AdminPage() {
             />
           </div>
 
-          {/* Image Upload */}
+          {/* Image */}
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className="text-xs text-gray-600">Image</label>
-
             {form.imageUrl ? (
               <div className="flex items-center gap-4">
                 <img
                   src={form.imageUrl}
+                  alt="Preview"
                   className="h-24 w-24 object-cover border rounded"
                 />
                 <div className="flex gap-2">
@@ -378,6 +442,11 @@ export default function AdminPage() {
                     Remove
                   </button>
                 </div>
+                {uploading && (
+                  <span className="text-sm text-gray-600">
+                    {uploadProgress}%
+                  </span>
+                )}
               </div>
             ) : (
               <div className="flex items-center gap-3">
@@ -425,7 +494,6 @@ export default function AdminPage() {
           </label>
         </div>
 
-        {/* Save */}
         <div className="mt-4">
           <button
             onClick={save}
@@ -461,19 +529,21 @@ export default function AdminPage() {
             <tr className="bg-gray-50 border-b">
               <th className="px-3 py-2">Title</th>
               <th className="px-3 py-2">Year</th>
-              <th className="px-3 py-2">Venue</th>
+              <th className="px-3 py-2 pl-8 w-1/12 ">Venue</th>
               <th className="px-3 py-2">Tags</th>
               <th className="px-3 py-2">Published</th>
-              <th className="px-3 py-2" />
+              <th className="px-3 py-2">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map((p) => (
               <tr key={p.id} className="border-b hover:bg-gray-50">
                 <td className="px-3 py-2">{p.title}</td>
-                <td className="px-3 py-2">{p.year}</td>
-                <td className="px-3 py-2">{p.venue}</td>
-                <td className="px-3 py-2">{p.tags?.join(", ")}</td>
+                <td className="px-3 py-2">{p.year ?? ""}</td>
+                <td className="px-3 py-2 pl-16 w-1/12">{p.venue ?? ""}</td>
+                <td className="px-3 py-2 pl-16 w-1/12">
+                  {toTags(p.tags).join(", ")}
+                </td>
                 <td className="px-3 py-2">{p.published ? "Yes" : "No"}</td>
                 <td className="px-3 py-2 space-x-3 whitespace-nowrap">
                   <button
@@ -492,7 +562,6 @@ export default function AdminPage() {
                 </td>
               </tr>
             ))}
-
             {filtered.length === 0 && (
               <tr>
                 <td className="px-3 py-4 text-gray-600" colSpan={6}>

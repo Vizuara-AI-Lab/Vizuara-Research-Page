@@ -1,15 +1,14 @@
-// lib/firebaseAdmin.ts
-import admin from "firebase-admin";
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
-  });
+const projectId = process.env.FIREBASE_PROJECT_ID!;
+const clientEmail = process.env.FIREBASE_CLIENT_EMAIL!;
+const privateKey = process.env.FIREBASE_PRIVATE_KEY!.replace(/\\n/g, '\n');
+
+if (!getApps().length) {
+  initializeApp({ credential: cert({ projectId, clientEmail, privateKey }), projectId });
 }
 
-export const adminAuth = admin.auth();
-export const adminDb = admin.firestore(); // if you're using Firestore
+export const adminAuth = getAdminAuth();
+export const db = getFirestore();

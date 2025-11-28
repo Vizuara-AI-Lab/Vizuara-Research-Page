@@ -1,11 +1,19 @@
 import { NextResponse } from 'next/server';
+import { adminAuth } from '@/app/lib/firebaseAdmin';
 import { verifyAdminFromRequest } from '@/app/lib/adminGuard';
 
-// Returns { isAdmin: boolean, email?: string }
 export async function GET(req: Request) {
-  const admin = await verifyAdminFromRequest(req);
-  if (!admin) {
-    return NextResponse.json({ isAdmin: false });
+  const auth = req.headers.get('authorization') || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+
+  let email: string | null = null;
+  if (token) {
+    try {
+      const decoded = await adminAuth.verifyIdToken(token);
+      email = decoded.email || null;
+    } catch {}
   }
-  return NextResponse.json({ isAdmin: true, email: admin.email });
+
+  const admin = await verifyAdminFromRequest(req);
+  return NextResponse.json({ isAdmin: !!admin, email });
 }
