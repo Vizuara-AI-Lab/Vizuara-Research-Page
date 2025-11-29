@@ -1,7 +1,7 @@
+// app/admin/page.tsx (or wherever your AdminPage lives)
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "./useAuth";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { storage } from "@/app/lib/firebaseClient";
 import {
   ref,
@@ -45,83 +45,12 @@ const slugify = (s: string) =>
     .replace(/\s+/g, "-")
     .slice(0, 60);
 
-// Wrapper: only auth/admin hooks here; all other hooks live in AdminPanel
 export default function AdminPage() {
-  const [tagsInput, setTagsInput] = useState("");
-
-  // Ensure your useAuth returns: { user, loading, admin, adminLoading, adminChecked, signIn, logOut, getToken }
-  const {
-    user,
-    loading,
-    admin,
-    adminLoading,
-    adminChecked,
-    signIn,
-    logOut,
-    getToken,
-  } = useAuth() as any;
-
-  // Wait for both auth and admin checks before deciding
-  if (loading || adminLoading || !adminChecked) {
-    return <div className="p-6">Checking access…</div>;
-  }
-
-  // Not signed in
-  if (!user) {
-    return (
-      <div className="p-6 space-y-4">
-        <h1 className="text-xl font-semibold">Admin</h1>
-        <button
-          onClick={signIn}
-          className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-50"
-        >
-          Sign in with Google
-        </button>
-      </div>
-    );
-  }
-
-  // Signed in but not admin
-  if (!admin?.isAdmin) {
-    return (
-      <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl text-red-600">Access Denied</h1>
-          <div className="text-sm flex items-center gap-3">
-            <span className="text-gray-600">{user.email}</span>
-            <button className="underline" onClick={logOut}>
-              Sign out
-            </button>
-          </div>
-        </div>
-        <p>You are not authorized to access the admin panel.</p>
-        <a href="/" className="underline text-vblue">
-          Go to home →
-        </a>
-      </div>
-    );
-  }
-
-  // Authorized → render full panel (all hooks live inside this child)
-  return (
-    <AdminPanel
-      userEmail={user.email || ""}
-      getToken={getToken}
-      logOut={logOut}
-    />
-  );
+  return <AdminPanel />;
 }
 
-// Full UI + hooks live here (mounted only for admins)
-function AdminPanel({
-  userEmail,
-  getToken,
-  logOut,
-}: {
-  userEmail: string;
-  getToken: () => Promise<string | undefined>;
-  logOut: () => void | Promise<void>;
-}) {
+// Full UI lives here (no auth/admin gating)
+function AdminPanel() {
   const [items, setItems] = useState<Pub[]>([]);
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -186,13 +115,12 @@ function AdminPanel({
   }, [items, search]);
 
   function startEdit(p: Pub) {
-    const safeTags = toTags(p.tags);
     setEditingId(p.id!);
     setForm({ ...p, tags: toTags(p.tags) });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function handlePickFile(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePickFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return alert("Select an image");
@@ -243,11 +171,7 @@ function AdminPanel({
   async function save() {
     try {
       setSaving(true);
-      const token = await getToken();
-      if (!token) {
-        alert("Please sign in with an admin account.");
-        return;
-      }
+
       if (!form.title.trim()) {
         alert("Title is required.");
         return;
@@ -272,7 +196,6 @@ function AdminPanel({
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payload),
       });
@@ -291,17 +214,11 @@ function AdminPanel({
 
   async function del(id: string) {
     try {
-      const token = await getToken();
-      if (!token) {
-        alert("Please sign in with an admin account.");
-        return;
-      }
       if (!confirm("Delete publication?")) return;
 
       setDeletingId(id);
       const res = await fetch(`/api/pubs/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(await res.text());
 
@@ -320,12 +237,6 @@ function AdminPanel({
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-normal">Admin • Publications</h1>
-        <div className="flex items-center gap-3 text-sm">
-          <span>{userEmail}</span>
-          <button className="underline" onClick={logOut}>
-            Sign out
-          </button>
-        </div>
       </div>
 
       {/* Editor */}
