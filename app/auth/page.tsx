@@ -19,22 +19,28 @@ export default function Login() {
   const router = useRouter();
   
 
-  const handleGoogleLogin = async () => {
-    setError("");
-    setLoading(true);
-    try {
+const handleGoogleLogin = async () => {
+  setError("");
+  setLoading(true);
 
-      const user = await signIn(); 
+  try {
+    const user = await signIn(); 
 
-      toast(  "Welcome!",{ description: "You signed in with Google." });
+    toast("Welcome!", { description: "You signed in with Google." });
 
-        router.push("/")
-    } catch (err: any) {
-      setError(err.message || "Something went wrong");
-    } finally {
-      setLoading(false);
+    // 👇 Redirect based on role
+    if (user?.role === USER_ROLE.ADMIN) {
+      router.push("/admin");
+    } else {
+      router.push("/");
     }
-  };
+  } catch (err: any) {
+    setError(err.message || "Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,9 +70,7 @@ export default function Login() {
             </Button>
           </CardContent>
 
-          <CardFooter className="border-t bg-card text-xs text-muted-foreground py-2 text-center">
-            Protected by reCAPTCHA and Google Policies
-          </CardFooter>
+        
         </Card>
       </div>
     </div>

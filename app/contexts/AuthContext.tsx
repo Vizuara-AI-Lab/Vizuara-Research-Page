@@ -3,20 +3,18 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { User } from "@/app/types/user";
 
-
-import { collection, doc, getDoc, query, where, getDocs } from "firebase/firestore";
-import { UserRole } from "@/app/types/general";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../lib/firebaseClient";
 import { authService } from "../services/authService";
-import {COLLECTION} from "@/app/types/constants";
+import { COLLECTION } from "@/app/types/constants";
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: () => Promise<void>;
+  signIn: () => Promise<User | null>;
   logOut: () => Promise<void>;
   adminChecked: boolean;
   isAdmin: boolean;
-  
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,13 +29,11 @@ interface AuthProviderProps {
   children: React.ReactNode;
 }
 
-// 🔹 Helper: fetch Firestore user
+// 🔹 Fetch Firestore user
 const fetchUserFromFirestore = async (uid: string): Promise<User | null> => {
   try {
-    const docRef = doc(db, COLLECTION.USERS, uid);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) return docSnap.data() as User;
-    return null;
+    const snap = await getDoc(doc(db, COLLECTION.USERS, uid));
+    return snap.exists() ? (snap.data() as User) : null;
   } catch (err) {
     console.error("Error fetching user:", err);
     return null;
@@ -50,23 +46,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [adminChecked, setAdminChecked] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  // 🔹 Keep user in sync with Firebase Auth state
+  // 🔹 Keep auth state synced
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged(async (firebaseUser) => {
-      if (!firebaseUser || !firebaseUser.emailVerified) {
+      if (!firebaseUser) {
         setUser(null);
-        setLoading(false);
-        setAdminChecked(true);
         setIsAdmin(false);
+        setAdminChecked(true);
+        setLoading(false);
         return;
       }
+
+      // (Optional) If you require emailVerified:
+      // if (!firebaseUser.emailVerified) return;
 
       const userData = await fetchUserFromFirestore(firebaseUser.uid);
       setUser(userData);
 
-      // check admin role
-      const adminRole = userData?.role === "ADMIN";
-      setIsAdmin(adminRole);
+      setIsAdmin(userData?.role === "ADMIN");
       setAdminChecked(true);
       setLoading(false);
     });
@@ -75,23 +72,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // 🔹 Google Sign In
-  const signIn = async () => {
+  const signIn = async (): Promise<User | null> => {
     setLoading(true);
     try {
       const response = await authService.signInWithGoogle();
 
       if (response.success && response.data?.userId) {
         const userData = await fetchUserFromFirestore(response.data.userId);
-        setUser(userData);
 
-        const adminRole = userData?.role === "ADMIN";
-        setIsAdmin(adminRole);
+        setUser(userData);
+        setIsAdmin(userData?.role === "ADMIN");
+        setAdminChecked(true);
+        return userData; // IMPORTANT: return user with role
       }
+
+      return null;
     } catch (err) {
       console.error("Sign-in failed", err);
+      return null;
     } finally {
       setLoading(false);
-      setAdminChecked(true);
     }
   };
 
@@ -105,19 +105,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (err) {
       console.error("Logout failed", err);
     } finally {
-      setLoading(false);
       setAdminChecked(true);
+      setLoading(false);
     }
   };
 
-  const value: AuthContextType = {
-    user,
-    loading,
-    signIn,
-    logOut,
-    adminChecked,
-    isAdmin,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        signIn,
+        logOut,
+        adminChecked,
+        isAdmin,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
