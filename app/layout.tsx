@@ -2,6 +2,7 @@
 import "./globals.css";
 import TopNavbar from "./components/TopNavbar";
 import { EB_Garamond } from "next/font/google";
+import { AuthProvider } from "./contexts/AuthContext"; // ✅
 
 const ebg = EB_Garamond({
   subsets: ["latin"],
@@ -21,12 +22,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={ebg.variable}>
       <body className="antialiased pt-16">
-        <TopNavbar />
-        <main className="min-h-screen">
-          <div className="mx-auto w-full max-w-7xl px-6 py-12 md:px-12 md:py-16">
-            {children}
-          </div>
-        </main>
+        <AuthProvider>
+          <TopNavbar />
+          <main className="min-h-screen">
+            <div className="mx-auto w-full max-w-7xl px-6 py-12 md:px-12 md:py-16">
+              {children}
+            </div>
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );
