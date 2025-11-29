@@ -1,92 +1,60 @@
 "use client";
 
+import { doc, getDoc } from "firebase/firestore";
+import { ReactNode, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthContext";
 import { db } from "../lib/firebaseClient";
-import { COLLECTION, USER_ROLE } from "@/app/types/constants";
-import { doc, getDoc } from "firebase/firestore";
-import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { COLLECTION } from "../types/constants";
 
 interface AuthGuardProps {
-  children: React.ReactNode;
-  requireAuth?: boolean;
+  children: ReactNode;
   requireAdmin?: boolean;
   message?: string;
 }
 
 export default function AuthGuard({
   children,
-  requireAuth = true,
   requireAdmin = false,
-  message = "Please login to access this page",
+  message = "Access denied",
 }: AuthGuardProps) {
-  const router = useRouter();
-  const pathname = usePathname();
-
   const { user, loading: authLoading } = useAuth();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const router = useRouter();
 
-  const [adminChecked, setAdminChecked] = useState(false);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
-
-  // ---------------------------
-  // Check Admin Role if Needed
-  // ---------------------------
   useEffect(() => {
     const checkAdminRole = async () => {
-      if (!requireAdmin) {
-        setIsAdmin(true);
-        setAdminChecked(true);
+      if (!user) {
+        router.push("/auth");
         return;
       }
 
-      if (user) {
-        try {
-          const snap = await getDoc(doc(db, COLLECTION.USERS, user.id));
-          const data = snap.data();
-          const ok = data?.role === USER_ROLE.ADMIN;
+      if (!requireAdmin) {
+        setIsAdmin(true);
+        return;
+      }
 
-          setIsAdmin(ok);
-          setAdminChecked(true);
-        } catch (err) {
-          setIsAdmin(false);
-          setAdminChecked(true);
-        }
-      } else {
-        setAdminChecked(true);
+      try {
+        const snap = await getDoc(doc(db, COLLECTION.USERS, user.id));
+        const data = snap.data();
+        setIsAdmin(data?.role === "ADMIN");
+      } catch {
+        setIsAdmin(false);
       }
     };
 
-    checkAdminRole();
-  }, [requireAdmin, user]);
-
-  // ---------------------------
-  // Handle redirect logic
-  // ---------------------------
-  useEffect(() => {
-    if (authLoading || !adminChecked) return;
-
-    // If login is required but no user
-    if (requireAuth && !user) {
-      router.push(`/login?redirect=${pathname}`);
-      return;
+    if (!authLoading) {
+      checkAdminRole();
     }
+  }, [user, authLoading, requireAdmin, router]);
 
-    // If admin page but user is not admin
-    if (requireAdmin && !isAdmin) {
-      router.push("/unauthorized");
-      return;
-    }
-  }, [authLoading, adminChecked, user, isAdmin]);
-
-  // ---------------------------
-  // Loading UI
-  // ---------------------------
-  if (authLoading || !adminChecked) {
-    return <div className="p-4">Validating permissions...</div>;
+  // Loading while checking auth/admin
+  if (authLoading || isAdmin === null) return <p>Loading...</p>;
+  console.log({ isAdmin });
+  // Not allowed
+  if (requireAdmin && !isAdmin) {
+    return <p>{message}</p>;
   }
 
-  // ---------------------------
-  // Final Authorized Render
-  // ---------------------------
   return <>{children}</>;
 }
