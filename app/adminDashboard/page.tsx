@@ -1,15 +1,15 @@
-// app/admin/page.tsx (or wherever your AdminPage lives)
+// app/admin/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { storage } from "@/app/lib/firebaseClient";
+import { storage, auth } from "@/app/lib/firebaseClient";
 import {
   ref,
   uploadBytesResumable,
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import { useAuth } from "./useAuth";
+import { useAuth } from "../contexts/AuthContext";
 import { useRouter } from "next/navigation";
 
 type Pub = {
@@ -47,11 +47,40 @@ const slugify = (s: string) =>
     .replace(/\s+/g, "-")
     .slice(0, 60);
 
+// Helper to get auth headers
+const getAuthHeaders = async (): Promise<HeadersInit> => {
+  const token = await auth.currentUser?.getIdToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token && { Authorization: `Bearer ${token}` }),
+  };
+};
+
 export default function AdminPage() {
+  const { user, isAdmin, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && (!user || !isAdmin)) {
+      router.push("/auth");
+    }
+  }, [user, isAdmin, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user || !isAdmin) {
+    return null;
+  }
+
   return <AdminPanel />;
 }
 
-// Full UI lives here (no auth/admin gating)
 function AdminPanel() {
   const [items, setItems] = useState<Pub[]>([]);
   const [search, setSearch] = useState("");
@@ -73,6 +102,9 @@ function AdminPanel() {
     published: true,
   });
 
+  const { logOut } = useAuth();
+  const router = useRouter();
+
   function resetForm() {
     setEditingId(null);
     setForm({
@@ -90,16 +122,18 @@ function AdminPanel() {
     setUploadProgress(0);
   }
 
-  const { user, logOut } = useAuth();
-const router = useRouter();
   const load = async () => {
-    const res = await fetch("/api/pubs", { cache: "no-store" });
-    const j = await res.json().catch(() => ({ publications: [] }));
-    const list = (j.publications || []).map((p: any) => ({
-      ...p,
-      tags: toTags(p.tags),
-    })) as Pub[];
-    setItems(list);
+    try {
+      const res = await fetch("/api/pubs", { cache: "no-store" });
+      const j = await res.json().catch(() => ({ publications: [] }));
+      const list = (j.publications || []).map((p: any) => ({
+        ...p,
+        tags: toTags(p.tags),
+      })) as Pub[];
+      setItems(list);
+    } catch (err) {
+      console.error("Failed to load publications:", err);
+    }
   };
 
   useEffect(() => {
@@ -110,9 +144,7 @@ const router = useRouter();
     const q = search.toLowerCase().trim();
     if (!q) return items;
     return items.filter((p) =>
-      `${p.title} ${p.authors || ""} ${p.venue || ""} ${toTags(p.tags).join(
-        " "
-      )}`
+      `${p.title} ${p.authors || ""} ${p.venue || ""} ${toTags(p.tags).join(" ")}`
         .toLowerCase()
         .includes(q)
     );
@@ -131,9 +163,7 @@ const router = useRouter();
 
     setUploading(true);
 
-    const safeName = `${slugify(
-      form.title || "file"
-    )}-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+    const safeName = `${slugify(form.title || "file")}-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
     const path = `publication-images/${safeName}`;
     const storageRef = ref(storage, path);
 
@@ -198,9 +228,7 @@ const router = useRouter();
 
       const res = await fetch(url, {
         method,
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -223,6 +251,7 @@ const router = useRouter();
       setDeletingId(id);
       const res = await fetch(`/api/pubs/${id}`, {
         method: "DELETE",
+        headers: await getAuthHeaders(),
       });
       if (!res.ok) throw new Error(await res.text());
 
@@ -236,46 +265,48 @@ const router = useRouter();
     }
   }
 
+  const handleLogout = async () => {
+    await logOut();
+    router.push("/auth");
+  };
+
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-4 sm:p-6 space-y-6 sm:space-y-8 max-w-7xl mx-auto">
       {/* Header */}
-   {/* Header */}
-<div className="flex items-center justify-between">
-  <h1 className="text-2xl font-normal">Admin • Publications</h1>
-  <button
-    onClick={logOut}
-    className="text-sm text-gray-600 hover:text-red-600"
-  >
-    Logout
-  </button>
-</div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-xl sm:text-2xl font-normal">Admin • Publications</h1>
+        <button
+          onClick={handleLogout}
+          className="text-base sm:text-lg text-gray-600 hover:text-red-600 underline self-start sm:self-auto"
+        >
+          Logout
+        </button>
+      </div>
 
       {/* Editor */}
-      <div className="rounded-md border border-gray-200 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-normal">
+      <div className="rounded-md border border-gray-200 p-3 sm:p-4">
+        <div className="mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h2 className="text-base sm:text-lg font-normal">
             {editingId ? "Edit publication" : "Add new publication"}
           </h2>
           {editingId && (
             <button
               onClick={resetForm}
-              className="text-sm rounded border border-gray-300 px-2 py-1 hover:bg-gray-50"
+              className="text-sm rounded border border-gray-300 px-2 py-1 hover:bg-gray-50 self-start sm:self-auto"
             >
               New
             </button>
           )}
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           {/* Title */}
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-600">Title</label>
             <input
-              className="border border-gray-300 px-3 py-2"
+              className="border border-gray-300 px-3 py-2 rounded text-sm sm:text-base"
               value={form.title}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, title: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               placeholder="Paper title"
             />
           </div>
@@ -284,11 +315,9 @@ const router = useRouter();
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-600">Authors</label>
             <input
-              className="border border-gray-300 px-3 py-2"
+              className="border border-gray-300 px-3 py-2 rounded text-sm sm:text-base"
               value={form.authors || ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, authors: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, authors: e.target.value }))}
               placeholder="Comma-separated authors"
             />
           </div>
@@ -297,11 +326,9 @@ const router = useRouter();
           <div className="flex flex-col gap-1">
             <label className="text-xs text-gray-600">Venue</label>
             <input
-              className="border border-gray-300 px-3 py-2"
+              className="border border-gray-300 px-3 py-2 rounded text-sm sm:text-base"
               value={form.venue || ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, venue: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))}
               placeholder="e.g., arXiv, NeurIPS 2024"
             />
           </div>
@@ -311,7 +338,7 @@ const router = useRouter();
             <label className="text-xs text-gray-600">Year</label>
             <input
               type="number"
-              className="border border-gray-300 px-3 py-2"
+              className="border border-gray-300 px-3 py-2 rounded text-sm sm:text-base"
               value={form.year ?? ""}
               onChange={(e) =>
                 setForm((f) => ({
@@ -324,23 +351,21 @@ const router = useRouter();
           </div>
 
           {/* Paper Link */}
-          <div className="flex flex-col gap-1 md:col-span-2">
+          <div className="flex flex-col gap-1 sm:col-span-2">
             <label className="text-xs text-gray-600">Paper Link</label>
             <input
-              className="border border-gray-300 px-3 py-2"
+              className="border border-gray-300 px-3 py-2 rounded text-sm sm:text-base"
               value={form.paperLink || ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, paperLink: e.target.value }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, paperLink: e.target.value }))}
               placeholder="https://arxiv.org/abs/..."
             />
           </div>
 
           {/* Image */}
-          <div className="flex flex-col gap-1 md:col-span-2">
+          <div className="flex flex-col gap-1 sm:col-span-2">
             <label className="text-xs text-gray-600">Image</label>
             {form.imageUrl ? (
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                 <img
                   src={form.imageUrl}
                   alt="Preview"
@@ -365,9 +390,7 @@ const router = useRouter();
                   </button>
                 </div>
                 {uploading && (
-                  <span className="text-sm text-gray-600">
-                    {uploadProgress}%
-                  </span>
+                  <span className="text-sm text-gray-600">{uploadProgress}%</span>
                 )}
               </div>
             ) : (
@@ -382,23 +405,19 @@ const router = useRouter();
                   />
                 </label>
                 {uploading && (
-                  <span className="text-sm text-gray-600">
-                    {uploadProgress}%
-                  </span>
+                  <span className="text-sm text-gray-600">{uploadProgress}%</span>
                 )}
               </div>
             )}
           </div>
 
           {/* Tags */}
-          <div className="flex flex-col gap-1 md:col-span-2">
+          <div className="flex flex-col gap-1 sm:col-span-2">
             <label className="text-xs text-gray-600">Tags</label>
             <input
-              className="border border-gray-300 px-3 py-2"
+              className="border border-gray-300 px-3 py-2 rounded text-sm sm:text-base"
               value={toTags(form.tags).join(", ")}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, tags: toTags(e.target.value) }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, tags: toTags(e.target.value) }))}
               placeholder="AI, ML, SciML"
             />
           </div>
@@ -408,9 +427,7 @@ const router = useRouter();
             <input
               type="checkbox"
               checked={!!form.published}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, published: e.target.checked }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, published: e.target.checked }))}
             />
             Published
           </label>
@@ -420,7 +437,7 @@ const router = useRouter();
           <button
             onClick={save}
             disabled={saving || uploading}
-            className="rounded bg-vblue px-4 py-2 text-white hover:opacity-90 disabled:opacity-60"
+            className="rounded bg-blue-600 px-4 py-2 text-white text-sm sm:text-base hover:bg-blue-700 disabled:opacity-60"
           >
             {uploading
               ? "Uploading…"
@@ -434,27 +451,60 @@ const router = useRouter();
       </div>
 
       {/* Toolbar */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-normal">All publications</h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h2 className="text-base sm:text-lg font-normal">All publications</h2>
         <input
-          className="border border-gray-300 px-3 py-2 text-sm"
+          className="border border-gray-300 px-3 py-2 text-sm rounded w-full sm:w-64"
           placeholder="Search title / authors / tags…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      {/* List */}
-      <div className="rounded-md border border-gray-200 overflow-auto">
+      {/* List - Mobile Cards */}
+      <div className="sm:hidden space-y-4">
+        {filtered.map((p) => (
+          <div key={p.id} className="border border-gray-200 rounded-md p-4 space-y-2">
+            <h3 className="font-medium">{p.title}</h3>
+            <div className="text-sm text-gray-600 space-y-1">
+              <p><span className="font-medium">Year:</span> {p.year ?? "—"}</p>
+              <p><span className="font-medium">Venue:</span> {p.venue ?? "—"}</p>
+              <p><span className="font-medium">Tags:</span> {toTags(p.tags).join(", ") || "—"}</p>
+              <p><span className="font-medium">Published:</span> {p.published ? "Yes" : "No"}</p>
+            </div>
+            <div className="flex gap-4 pt-2">
+              <button
+                className="text-blue-600 hover:underline text-sm"
+                onClick={() => startEdit(p)}
+              >
+                Edit
+              </button>
+              <button
+                className="text-red-600 hover:underline text-sm disabled:opacity-50"
+                disabled={deletingId === p.id}
+                onClick={() => del(p.id!)}
+              >
+                {deletingId === p.id ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <p className="text-gray-600 text-center py-4">No publications found.</p>
+        )}
+      </div>
+
+      {/* List - Desktop Table */}
+      <div className="hidden sm:block rounded-md border border-gray-200 overflow-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="px-3 py-2">Title</th>
-              <th className="px-3 py-2">Year</th>
-              <th className="px-3 py-2 pl-8 w-1/12 ">Venue</th>
-              <th className="px-3 py-2">Tags</th>
-              <th className="px-3 py-2">Published</th>
-              <th className="px-3 py-2">Actions</th>
+            <tr className="bg-gray-50 border-b text-left">
+              <th className="px-3 py-2 font-medium">Title</th>
+              <th className="px-3 py-2 font-medium">Year</th>
+              <th className="px-3 py-2 font-medium">Venue</th>
+              <th className="px-3 py-2 font-medium">Tags</th>
+              <th className="px-3 py-2 font-medium">Published</th>
+              <th className="px-3 py-2 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -462,14 +512,12 @@ const router = useRouter();
               <tr key={p.id} className="border-b hover:bg-gray-50">
                 <td className="px-3 py-2">{p.title}</td>
                 <td className="px-3 py-2">{p.year ?? ""}</td>
-                <td className="px-3 py-2 pl-16 w-1/12">{p.venue ?? ""}</td>
-                <td className="px-3 py-2 pl-16 w-1/12">
-                  {toTags(p.tags).join(", ")}
-                </td>
+                <td className="px-3 py-2">{p.venue ?? ""}</td>
+                <td className="px-3 py-2">{toTags(p.tags).join(", ")}</td>
                 <td className="px-3 py-2">{p.published ? "Yes" : "No"}</td>
                 <td className="px-3 py-2 space-x-3 whitespace-nowrap">
                   <button
-                    className="text-vblue hover:underline"
+                    className="text-blue-600 hover:underline"
                     onClick={() => startEdit(p)}
                   >
                     Edit
