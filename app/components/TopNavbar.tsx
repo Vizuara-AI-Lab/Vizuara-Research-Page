@@ -2,9 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
 
 const nav = [
   { label: "Overview", href: "/" },
@@ -19,8 +18,6 @@ const nav = [
 export default function TopNavbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const { user, logOut } = useAuth();
-  const router = useRouter();
 
   return (
     <nav className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-gray-300 z-50">
@@ -33,51 +30,26 @@ export default function TopNavbar() {
         </Link>
 
         {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-6">
-          <ul className="flex items-center gap-6">
-            {nav.map((item) => {
-              const active = pathname === item.href;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={`text-sm transition-colors ${
-                      active
-                        ? "text-[#2596be]"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                    aria-current={active ? "page" : undefined}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-
-          {/* Desktop Auth Button */}
-          {user ? (
-            <button
-              onClick={logOut}
-              className="ml-4 px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, hsl(300 100% 50%), hsl(198 75% 52%))",
-              }}
-            >
-              Logout
-            </button>
-          ) : (
-            <button
-              onClick={() => router.push("/auth")}
-              className="ml-4 px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg"
-              style={{
-                background: "linear-gradient(135deg, hsl(300 100% 50%), hsl(198 75% 52%))",
-              }}
-            >
-              Login
-            </button>
-          )}
-        </div>
+        <ul className="hidden md:flex items-center gap-6">
+          {nav.map((item) => {
+            const active = pathname === item.href;
+            return (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`text-sm transition-colors ${
+                    active
+                      ? "text-[#2596be]"
+                      : "text-gray-600 hover:text-gray-900"
+                  }`}
+                  aria-current={active ? "page" : undefined}
+                >
+                  {item.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
 
         {/* Mobile toggle */}
         <button
@@ -120,35 +92,6 @@ export default function TopNavbar() {
               </Link>
             );
           })}
-          
-          {/* Mobile Auth Button */}
-          {user ? (
-            <button
-              onClick={() => {
-                logOut();
-                setOpen(false);
-              }}
-              className="mt-2 w-full px-4 py-2 text-sm font-medium text-white rounded-lg"
-              style={{
-                background: "linear-gradient(135deg, hsl(300 100% 50%), hsl(198 75% 52%))",
-              }}
-            >
-              Logout
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                router.push("/auth");
-                setOpen(false);
-              }}
-              className="mt-2 w-full px-4 py-2 text-sm font-medium text-white rounded-lg"
-              style={{
-                background: "linear-gradient(135deg, hsl(300 100% 50%), hsl(198 75% 52%))",
-              }}
-            >
-              Login
-            </button>
-          )}
         </div>
       </div>
     </nav>

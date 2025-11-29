@@ -9,6 +9,8 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
+import { useAuth } from "./useAuth";
+import { useRouter } from "next/navigation";
 
 type Pub = {
   id?: string;
@@ -88,6 +90,8 @@ function AdminPanel() {
     setUploadProgress(0);
   }
 
+  const { user, logOut } = useAuth();
+const router = useRouter();
   const load = async () => {
     const res = await fetch("/api/pubs", { cache: "no-store" });
     const j = await res.json().catch(() => ({ publications: [] }));
@@ -235,9 +239,16 @@ function AdminPanel() {
   return (
     <div className="p-6 space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-normal">Admin • Publications</h1>
-      </div>
+   {/* Header */}
+<div className="flex items-center justify-between">
+  <h1 className="text-2xl font-normal">Admin • Publications</h1>
+  <button
+    onClick={logOut}
+    className="text-sm text-gray-600 hover:text-red-600"
+  >
+    Logout
+  </button>
+</div>
 
       {/* Editor */}
       <div className="rounded-md border border-gray-200 p-4">
