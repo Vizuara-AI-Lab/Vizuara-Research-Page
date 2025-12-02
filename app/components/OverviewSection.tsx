@@ -58,19 +58,19 @@ export default function OverviewSection() {
           {/* Impact stats */}
           <div className="mt-8 grid grid-cols-3 gap-4 max-w-md">
             <div className="bg-gray-50 border border-gray-300 p-5 text-center">
-              <div className="text-3xl font-normal text-gray-900">5+</div>
+              <div className="text-3xl font-normal text-gray-900">20+</div>
               <div className="text-sm text-gray-700 font-light">
                 Publications
               </div>
             </div>
             <div className="bg-gray-50 border border-gray-300 p-5 text-center">
-              <div className="text-3xl font-normal text-gray-900">7+</div>
+              <div className="text-3xl font-normal text-gray-900">10+</div>
               <div className="text-sm text-gray-700 font-light">
                 Research Areas
               </div>
             </div>
             <div className="bg-gray-50 border border-gray-300 p-5 text-center">
-              <div className="text-3xl font-normal text-gray-900">12+</div>
+              <div className="text-3xl font-normal text-gray-900">20+</div>
               <div className="text-sm text-gray-700 font-light">
                 Researchers
               </div>
