@@ -2,9 +2,9 @@ import StatCard from "./StatCard";
 
 export default function ImpactSection() {
   const stats = [
-    { value: "7+", label: "Active Research Areas" },
-    { value: "5+", label: "Published Papers" },
-    { value: "12+", label: "Research Team" },
+    { value: "10+", label: "Active Research Areas" },
+    { value: "20+", label: "Published Papers" },
+    { value: "20+", label: "Research Team" },
   ];
 
   return (

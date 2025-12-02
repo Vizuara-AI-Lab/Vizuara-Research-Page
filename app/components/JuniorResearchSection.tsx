@@ -71,9 +71,9 @@ export default function JuniorResearchSection() {
   ];
 
   const stats = [
-    { value: '5', label: 'Research Papers' },
-    { value: '5+', label: 'Active Projects' },
-    { value: '25+', label: 'Program Participants' },
+    { value: '10', label: 'Research Papers' },
+    { value: '15+', label: 'Active Projects' },
+    { value: '30+', label: 'Program Participants' },
   ];
 
   return (
