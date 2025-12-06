@@ -23,6 +23,17 @@ type Pub = {
   published?: boolean;
 };
 
+type Team = {
+  id?: string;
+  name: string;
+  title: string;
+  education?: string;
+  linkedInUrl?: string;
+  imageUrl?: string;
+  imagePath?: string;
+  published?: boolean;
+};
+
 const toTags = (t: unknown): string[] => {
   if (Array.isArray(t))
     return t
@@ -45,11 +56,9 @@ const slugify = (s: string) =>
     .replace(/\s+/g, "-")
     .slice(0, 60);
 
-// Wrapper: only auth/admin hooks here; all other hooks live in AdminPanel
 export default function AdminPage() {
   const [tagsInput, setTagsInput] = useState("");
 
-  // Ensure your useAuth returns: { user, loading, admin, adminLoading, adminChecked, signIn, logOut, getToken }
   const {
     user,
     loading,
@@ -61,19 +70,17 @@ export default function AdminPage() {
     getToken,
   } = useAuth() as any;
 
-  // Wait for both auth and admin checks before deciding
   if (loading || adminLoading || !adminChecked) {
-    return <div className="p-6">Checking access…</div>;
+    return <div className="p-4 sm:p-6">Checking access…</div>;
   }
 
-  // Not signed in
   if (!user) {
     return (
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <h1 className="text-xl font-semibold">Admin</h1>
         <button
           onClick={signIn}
-          className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-50"
+          className="w-full sm:w-auto rounded border border-gray-300 px-4 py-2 hover:bg-gray-50"
         >
           Sign in with Google
         </button>
@@ -81,11 +88,10 @@ export default function AdminPage() {
     );
   }
 
-  // Signed in but not admin
   if (!admin?.isAdmin) {
     return (
-      <div className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
+      <div className="p-4 sm:p-6 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-xl text-red-600">Access Denied</h1>
           <div className="text-sm flex items-center gap-3">
             <span className="text-gray-600">{user.email}</span>
@@ -102,7 +108,6 @@ export default function AdminPage() {
     );
   }
 
-  // Authorized → render full panel (all hooks live inside this child)
   return (
     <AdminPanel
       userEmail={user.email || ""}
@@ -112,7 +117,327 @@ export default function AdminPage() {
   );
 }
 
-// Full UI + hooks live here (mounted only for admins)
+function TeamEditor({
+  getToken,
+}: {
+  getToken: () => Promise<string | undefined>;
+}) {
+  const [team, setTeam] = useState<Team[]>([]);
+  const [search, setSearch] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const [form, setForm] = useState<Team>({
+    name: "",
+    title: "",
+    education: "",
+    linkedInUrl: "",
+    imageUrl: "",
+    imagePath: "",
+    published: true,
+  });
+
+  async function loadTeam() {
+    const res = await fetch("/api/team", { cache: "no-store" });
+    const j = await res.json().catch(() => ({ members: [] }));
+    setTeam(j.members || []);
+  }
+
+  useEffect(() => {
+    loadTeam();
+  }, []);
+
+  const filteredTeam = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return team;
+    return team.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.title.toLowerCase().includes(q) ||
+        (m.education || "").toLowerCase().includes(q)
+    );
+  }, [team, search]);
+
+  function reset() {
+    setEditingId(null);
+    setForm({
+      name: "",
+      title: "",
+      education: "",
+      linkedInUrl: "",
+      imageUrl: "",
+      imagePath: "",
+      published: true,
+    });
+  }
+
+  function startEdit(member: Team) {
+    setEditingId(member.id!);
+    setForm({ ...member });
+    // Scroll to the Team section headline
+    document
+      .getElementById("team-section")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return alert("Select an image");
+    setUploading(true);
+
+    const safeName = `${slugify(
+      form.name || "team"
+    )}-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+    const path = `team/${safeName}`;
+    const storageRef = ref(storage, path);
+    const task = uploadBytesResumable(storageRef, file);
+
+    task.on(
+      "state_changed",
+      (snap) =>
+        setUploadProgress(
+          Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
+        ),
+      () => {
+        alert("Upload failed");
+        setUploading(false);
+      },
+      async () => {
+        if (form.imagePath && form.imagePath !== path) {
+          try {
+            await deleteObject(ref(storage, form.imagePath));
+          } catch {}
+        }
+        const url = await getDownloadURL(task.snapshot.ref);
+        setForm((f) => ({ ...f, imageUrl: url, imagePath: path }));
+        setUploading(false);
+      }
+    );
+
+    e.currentTarget.value = "";
+  }
+
+  async function removeImage() {
+    if (form.imagePath) {
+      try {
+        await deleteObject(ref(storage, form.imagePath));
+      } catch {}
+    }
+    setForm((f) => ({ ...f, imageUrl: "", imagePath: "" }));
+  }
+
+  async function save() {
+    setSaving(true);
+    const token = await getToken();
+    if (!token) return alert("Not authorized");
+    const payload = { ...form, published: !!form.published };
+    const method = editingId ? "PATCH" : "POST";
+    const url = editingId ? `/api/team/${editingId}` : `/api/team`;
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) alert(await res.text());
+    await loadTeam();
+    reset();
+    setSaving(false);
+  }
+
+  async function del(id: string) {
+    if (!confirm("Delete member?")) return;
+    const token = await getToken();
+    setDeletingId(id);
+    await fetch(`/api/team/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    setDeletingId(null);
+    await loadTeam();
+  }
+
+  return (
+    <div id="team-section" className="space-y-6 mt-6 scroll-mt-20">
+      {/* Form */}
+      <div className="border p-4 rounded-md">
+        <h2 className="text-lg mb-3">
+          {editingId ? "Edit Member" : "Add Member"}
+        </h2>
+        <div className="grid gap-3 md:grid-cols-2">
+          <input
+            className="border px-3 py-2 w-full text-sm"
+            placeholder="Name"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+          <input
+            className="border px-3 py-2 w-full text-sm"
+            placeholder="Title"
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+          />
+          <input
+            className="border px-3 py-2 w-full text-sm"
+            placeholder="Education"
+            value={form.education}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, education: e.target.value }))
+            }
+          />
+          <input
+            className="border px-3 py-2 w-full text-sm"
+            placeholder="LinkedIn URL"
+            value={form.linkedInUrl}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, linkedInUrl: e.target.value }))
+            }
+          />
+
+          {/* Image upload section */}
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <label className="text-xs text-gray-600 block mb-1">Image</label>
+            {form.imageUrl ? (
+              <div className="flex flex-wrap items-center gap-4">
+                <img
+                  src={form.imageUrl}
+                  alt="Preview"
+                  className="h-20 w-20 sm:h-24 sm:w-24 object-cover border rounded"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Replace */}
+                  <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
+                    Replace
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={pickFile}
+                    />
+                  </label>
+
+                  {/* Remove */}
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+                  >
+                    Remove
+                  </button>
+
+                  {/* Upload progress */}
+                  {uploading && (
+                    <span className="text-sm text-gray-600">
+                      {uploadProgress}%
+                    </span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50 w-fit">
+                  Upload image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={pickFile }
+                  />
+                </label>
+                {uploading && (
+                  <span className="text-sm text-gray-600">
+                    {uploadProgress}%
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!form.published}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, published: e.target.checked }))
+              }
+            />
+            Published
+          </label>
+        </div>
+
+        <button
+          disabled={saving}
+          onClick={save}
+          className="mt-4 w-full sm:w-auto bg-vblue text-white px-4 py-2 rounded"
+        >
+          {saving ? "Saving…" : editingId ? "Update" : "Create"}
+        </button>
+      </div>
+
+      {/* Search bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-normal">All Team Members</h2>
+        <input
+          className="border border-gray-300 px-3 py-2 text-sm w-full sm:w-auto"
+          placeholder="Search by name, title, education…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* Table */}
+      <div className="w-full overflow-x-auto rounded-md border">
+        <table className="min-w-[600px] sm:min-w-full text-xs sm:text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b text-left">
+              <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Title</th>
+              <th className="px-3 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredTeam.map((m) => (
+              <tr key={m.id} className="border-b hover:bg-gray-50">
+                <td className="px-3 py-2 align-top">{m.name}</td>
+                <td className="px-3 py-2 align-top">{m.title}</td>
+                <td className="px-3 py-2 align-top space-x-2">
+                  <button
+                    className="text-vblue hover:underline"
+                    onClick={() => startEdit(m)}
+                  >
+                    Edit
+                  </button>
+                  <button
+                    className="text-red-600 hover:underline disabled:opacity-50"
+                    disabled={deletingId === m.id}
+                    onClick={() => del(m.id!)}
+                  >
+                    {deletingId === m.id ? "Deleting…" : "Delete"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {!filteredTeam.length && (
+              <tr>
+                <td colSpan={3} className="px-3 py-4 text-gray-600">
+                  No team members found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function AdminPanel({
   userEmail,
   getToken,
@@ -142,23 +467,6 @@ function AdminPanel({
     published: true,
   });
 
-  function resetForm() {
-    setEditingId(null);
-    setForm({
-      title: "",
-      authors: "",
-      venue: "",
-      year: null,
-      paperLink: "",
-      imageUrl: "",
-      imagePath: "",
-      tags: [],
-      published: true,
-    });
-    setUploading(false);
-    setUploadProgress(0);
-  }
-
   const load = async () => {
     const res = await fetch("/api/pubs", { cache: "no-store" });
     const j = await res.json().catch(() => ({ publications: [] }));
@@ -186,7 +494,6 @@ function AdminPanel({
   }, [items, search]);
 
   function startEdit(p: Pub) {
-    const safeTags = toTags(p.tags);
     setEditingId(p.id!);
     setForm({ ...p, tags: toTags(p.tags) });
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -198,13 +505,11 @@ function AdminPanel({
     if (!file.type.startsWith("image/")) return alert("Select an image");
 
     setUploading(true);
-
     const safeName = `${slugify(
       form.title || "file"
     )}-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
     const path = `publication-images/${safeName}`;
     const storageRef = ref(storage, path);
-
     const task = uploadBytesResumable(storageRef, file);
     task.on(
       "state_changed",
@@ -244,14 +549,8 @@ function AdminPanel({
     try {
       setSaving(true);
       const token = await getToken();
-      if (!token) {
-        alert("Please sign in with an admin account.");
-        return;
-      }
-      if (!form.title.trim()) {
-        alert("Title is required.");
-        return;
-      }
+      if (!token) return alert("Please sign in with an admin account.");
+      if (!form.title.trim()) return alert("Title is required.");
 
       const payload: Pub = {
         title: form.title.trim(),
@@ -267,7 +566,6 @@ function AdminPanel({
 
       const method = editingId ? "PATCH" : "POST";
       const url = editingId ? `/api/pubs/${editingId}` : "/api/pubs";
-
       const res = await fetch(url, {
         method,
         headers: {
@@ -276,13 +574,21 @@ function AdminPanel({
         },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) throw new Error(await res.text());
-
       await load();
-      resetForm();
+      setEditingId(null);
+      setForm({
+        title: "",
+        authors: "",
+        venue: "",
+        year: null,
+        paperLink: "",
+        imageUrl: "",
+        imagePath: "",
+        tags: [],
+        published: true,
+      });
     } catch (err: any) {
-      console.error(err);
       alert(err?.message || "Save failed");
     } finally {
       setSaving(false);
@@ -292,35 +598,28 @@ function AdminPanel({
   async function del(id: string) {
     try {
       const token = await getToken();
-      if (!token) {
-        alert("Please sign in with an admin account.");
-        return;
-      }
+      if (!token) return alert("Please sign in with an admin account.");
       if (!confirm("Delete publication?")) return;
-
       setDeletingId(id);
       const res = await fetch(`/api/pubs/${id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error(await res.text());
-
       await load();
-      if (editingId === id) resetForm();
-    } catch (err: any) {
-      console.error(err);
-      alert(err?.message || "Delete failed");
+      if (editingId === id) setEditingId(null);
     } finally {
       setDeletingId(null);
     }
   }
 
   return (
-    <div className="p-6 space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-normal">Admin • Publications</h1>
-        <div className="flex items-center gap-3 text-sm">
+    <div className="p-4 sm:p-6 space-y-8 overflow-x-auto">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl sm:text-2xl font-normal">
+          Admin • Publications
+        </h1>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
           <span>{userEmail}</span>
           <button className="underline" onClick={logOut}>
             Sign out
@@ -330,13 +629,15 @@ function AdminPanel({
 
       {/* Editor */}
       <div className="rounded-md border border-gray-200 p-4">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-normal">
             {editingId ? "Edit publication" : "Add new publication"}
           </h2>
           {editingId && (
             <button
-              onClick={resetForm}
+              onClick={() => {
+                setEditingId(null);
+              }}
               className="text-sm rounded border border-gray-300 px-2 py-1 hover:bg-gray-50"
             >
               New
@@ -345,113 +646,58 @@ function AdminPanel({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2">
-          {/* Title */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">Title</label>
-            <input
-              className="border border-gray-300 px-3 py-2"
-              value={form.title}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, title: e.target.value }))
-              }
-              placeholder="Paper title"
-            />
-          </div>
+          <input
+            className="border border-gray-300 px-3 py-2 w-full text-sm"
+            placeholder="Title"
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+          />
+          <input
+            className="border border-gray-300 px-3 py-2 w-full text-sm"
+            placeholder="Authors"
+            value={form.authors || ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, authors: e.target.value }))
+            }
+          />
+          <input
+            className="border border-gray-300 px-3 py-2 w-full text-sm"
+            placeholder="Venue"
+            value={form.venue || ""}
+            onChange={(e) => setForm((f) => ({ ...f, venue: e.target.value }))}
+          />
+          <input
+            type="number"
+            className="border border-gray-300 px-3 py-2 w-full text-sm"
+            placeholder="Year"
+            value={form.year ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({
+                ...f,
+                year: e.target.value ? Number(e.target.value) : null,
+              }))
+            }
+          />
+          <input
+            className="border border-gray-300 px-3 py-2 md:col-span-2 w-full text-sm"
+            placeholder="Paper Link"
+            value={form.paperLink || ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, paperLink: e.target.value }))
+            }
+          />
 
-          {/* Authors */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">Authors</label>
-            <input
-              className="border border-gray-300 px-3 py-2"
-              value={form.authors || ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, authors: e.target.value }))
-              }
-              placeholder="Comma-separated authors"
-            />
-          </div>
-
-          {/* Venue */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">Venue</label>
-            <input
-              className="border border-gray-300 px-3 py-2"
-              value={form.venue || ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, venue: e.target.value }))
-              }
-              placeholder="e.g., arXiv, NeurIPS 2024"
-            />
-          </div>
-
-          {/* Year */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-gray-600">Year</label>
-            <input
-              type="number"
-              className="border border-gray-300 px-3 py-2"
-              value={form.year ?? ""}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  year: e.target.value ? Number(e.target.value) : null,
-                }))
-              }
-              placeholder="2025"
-            />
-          </div>
-
-          {/* Paper Link */}
-          <div className="flex flex-col gap-1 md:col-span-2">
-            <label className="text-xs text-gray-600">Paper Link</label>
-            <input
-              className="border border-gray-300 px-3 py-2"
-              value={form.paperLink || ""}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, paperLink: e.target.value }))
-              }
-              placeholder="https://arxiv.org/abs/..."
-            />
-          </div>
-
-          {/* Image */}
           <div className="flex flex-col gap-1 md:col-span-2">
             <label className="text-xs text-gray-600">Image</label>
             {form.imageUrl ? (
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-3">
                 <img
                   src={form.imageUrl}
                   alt="Preview"
-                  className="h-24 w-24 object-cover border rounded"
+                  className="h-20 w-20 sm:h-24 sm:w-24 object-cover border rounded"
                 />
-                <div className="flex gap-2">
-                  <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
-                    Replace
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handlePickFile}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
-                  >
-                    Remove
-                  </button>
-                </div>
-                {uploading && (
-                  <span className="text-sm text-gray-600">
-                    {uploadProgress}%
-                  </span>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-3">
                 <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
-                  Upload image
+                  Replace
                   <input
                     type="file"
                     accept="image/*"
@@ -459,29 +705,41 @@ function AdminPanel({
                     onChange={handlePickFile}
                   />
                 </label>
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+                >
+                  Remove
+                </button>
                 {uploading && (
                   <span className="text-sm text-gray-600">
                     {uploadProgress}%
                   </span>
                 )}
               </div>
+            ) : (
+              <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50 w-fit">
+                Upload image
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePickFile}
+                />
+              </label>
             )}
           </div>
 
-          {/* Tags */}
-          <div className="flex flex-col gap-1 md:col-span-2">
-            <label className="text-xs text-gray-600">Tags</label>
-            <input
-              className="border border-gray-300 px-3 py-2"
-              value={toTags(form.tags).join(", ")}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, tags: toTags(e.target.value) }))
-              }
-              placeholder="AI, ML, SciML"
-            />
-          </div>
+          <input
+            className="border border-gray-300 px-3 py-2 md:col-span-2 w-full text-sm"
+            placeholder="Tags (AI, ML, SciML)"
+            value={toTags(form.tags).join(", ")}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, tags: toTags(e.target.value) }))
+            }
+          />
 
-          {/* Published */}
           <label className="inline-flex items-center gap-2 text-sm mt-1">
             <input
               type="checkbox"
@@ -498,7 +756,7 @@ function AdminPanel({
           <button
             onClick={save}
             disabled={saving || uploading}
-            className="rounded bg-vblue px-4 py-2 text-white hover:opacity-90 disabled:opacity-60"
+            className="w-full sm:w-auto rounded bg-vblue px-4 py-2 text-white hover:opacity-90 disabled:opacity-60"
           >
             {uploading
               ? "Uploading…"
@@ -511,25 +769,23 @@ function AdminPanel({
         </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-normal">All publications</h2>
         <input
-          className="border border-gray-300 px-3 py-2 text-sm"
+          className="border border-gray-300 px-3 py-2 text-sm w-full sm:w-auto"
           placeholder="Search title / authors / tags…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
-      {/* List */}
-      <div className="rounded-md border border-gray-200 overflow-auto">
-        <table className="w-full text-sm">
+      <div className="w-full overflow-x-auto rounded-md border border-gray-200">
+        <table className="min-w-[700px] sm:min-w-full text-xs sm:text-sm">
           <thead>
             <tr className="bg-gray-50 border-b">
-              <th className="px-3 py-2">Title</th>
+              <th className="px-3 py-2 text-left">Title</th>
               <th className="px-3 py-2">Year</th>
-              <th className="px-3 py-2 pl-8 w-1/12 ">Venue</th>
+              <th className="px-3 py-2 ">Venue</th>
               <th className="px-3 py-2">Tags</th>
               <th className="px-3 py-2">Published</th>
               <th className="px-3 py-2">Actions</th>
@@ -540,12 +796,12 @@ function AdminPanel({
               <tr key={p.id} className="border-b hover:bg-gray-50">
                 <td className="px-3 py-2">{p.title}</td>
                 <td className="px-3 py-2">{p.year ?? ""}</td>
-                <td className="px-3 py-2 pl-16 w-1/12">{p.venue ?? ""}</td>
-                <td className="px-3 py-2 pl-16 w-1/12">
+                <td className="px-3 py-2 text-center">{p.venue ?? ""}</td>
+                <td className="px-3 py-2 text-center">
                   {toTags(p.tags).join(", ")}
                 </td>
                 <td className="px-3 py-2">{p.published ? "Yes" : "No"}</td>
-                <td className="px-3 py-2 space-x-3 whitespace-nowrap">
+                <td className="px-3 py-2 whitespace-nowrap space-x-2">
                   <button
                     className="text-vblue hover:underline"
                     onClick={() => startEdit(p)}
@@ -571,6 +827,15 @@ function AdminPanel({
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-12 sm:mt-20">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-normal">
+            Admin • Team Members
+          </h1>
+        </div>
+        <TeamEditor getToken={getToken} />
       </div>
     </div>
   );

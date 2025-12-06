@@ -1,11 +1,10 @@
-// components/TeamMemberCard.tsx
 interface TeamMemberCardProps {
   name: string;
   title: string;
-  education: string;
-  imageUrl: string;
-  linkedInUrl: string;
-  small: boolean;
+  education?: string;
+  imageUrl?: string;
+  linkedInUrl?: string;
+  small?: boolean;
 }
 
 export default function TeamMemberCard({
@@ -16,49 +15,76 @@ export default function TeamMemberCard({
   linkedInUrl,
   small = false,
 }: TeamMemberCardProps) {
+ 
+  const initials = name
+    ? name
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "U";
+
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+    initials
+  )}&background=0D8ABC&color=fff&size=200&rounded=true`;
+
+  const avatar = imageUrl && imageUrl.trim() !== "" ? imageUrl : fallbackAvatar;
+
   return (
-    <div className="text-center">
-      <div className="mx-auto mb-4 h-40 w-40 overflow-hidden rounded-full border-2 border-vblue transition group-hover:scale-[1.01]">
+    <div className="text-center flex flex-col items-center">
+      {/* Avatar container */}
+      <div
+        className={`rounded-full overflow-hidden border-2 border-vblue mb-4 
+          flex items-center justify-center
+          ${small ? "h-28 w-28" : "h-40 w-40"}`}
+      >
         <img
-          src={imageUrl}
+          src={avatar}
           alt={name}
-          className={`h-full w-full object-cover  ${
-            small ? "h-18 w-18" : "h-28 w-28"
-          }`}
+          className="h-full w-full object-cover"
           loading="lazy"
         />
       </div>
+
+      {/* Name */}
       <h4
-        className={`mb-1 text-lg font-normal text-gray-900 ${
-          small ? "text-sm" : "text-base"
-        }`}
+        className={`font-medium text-gray-900 mb-1 
+          ${small ? "text-sm" : "text-lg"}`}
       >
         {name}
       </h4>
+
+      {/* Position */}
       <p
-        className={`mb-2 text-sm font-light text-gray-600 ${
-          small ? "text-xs" : "text-sm"
-        }`}
+        className={`text-gray-600 font-light 
+          ${small ? "text-xs" : "text-sm"}`}
       >
         {title}
       </p>
-      <p
-        className={`mb-3 text-sm font-light text-gray-700 ${
-          small ? "text-[11px]" : "text-xs"
-        } mt-1`}
-      >
-        {education}
-      </p>
-      <a
-        href={linkedInUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={`text-sm text-vblue hover:underline ${
-          small ? "text-sm" : "text-base"
-        }`}
-      >
-        LinkedIn →
-      </a>
+
+      {/* Education */}
+      {education && (
+        <p
+          className={`mt-1 text-gray-700 font-light
+            ${small ? "text-[10px]" : "text-xs"}`}
+        >
+          {education}
+        </p>
+      )}
+
+      {/* LinkedIn */}
+      {linkedInUrl && (
+        <a
+          href={linkedInUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={`mt-3 text-vblue hover:underline 
+            ${small ? "text-xs" : "text-sm"}`}
+        >
+          LinkedIn →
+        </a>
+      )}
     </div>
   );
 }
