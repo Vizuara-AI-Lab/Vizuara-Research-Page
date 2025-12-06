@@ -13,6 +13,7 @@ type TeamMember = {
   linkedInUrl?: string;
   imageUrl?: string;
   published?: boolean;
+  scholarUrl?: string;
 };
 
 export default function TeamSection() {
@@ -81,19 +82,22 @@ export default function TeamSection() {
         </span>
 
         <h2 className="mt-3 text-4xl font-normal text-gray-900 tracking-tight">
-          Team
+          Our Co-authors
         </h2>
 
         <p className="mt-3 text-gray-600 text-lg font-light leading-relaxed max-w-3xl">
           We’re an interdisciplinary group with roots in MIT, Purdue, and IIT
-          Madras, working across scientific ML, model efficiency, and applied AI.
+          Madras, working across scientific ML, model efficiency, and applied
+          AI.
         </p>
 
         {/* 🔹 Toggle Buttons */}
         <div className="mt-4 flex gap-2 text-sm">
           <button
             onClick={() =>
-              document.getElementById("founders")?.scrollIntoView({ behavior: "smooth" })
+              document
+                .getElementById("founders")
+                ?.scrollIntoView({ behavior: "smooth" })
             }
             className="rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:border-vblue hover:text-vblue transition-colors"
           >
@@ -102,7 +106,9 @@ export default function TeamSection() {
 
           <button
             onClick={() =>
-              document.getElementById("core-team")?.scrollIntoView({ behavior: "smooth" })
+              document
+                .getElementById("core-team")
+                ?.scrollIntoView({ behavior: "smooth" })
             }
             className="rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:border-vblue hover:text-vblue transition-colors"
           >
@@ -136,7 +142,9 @@ export default function TeamSection() {
         <h3 className="text-2xl font-normal text-gray-900 mb-6">Team</h3>
 
         {teamMembers.length === 0 ? (
-          <p className="text-gray-500 text-sm">Team members will be added soon.</p>
+          <p className="text-gray-500 text-sm">
+            Team members will be added soon.
+          </p>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {teamMembers.map((member) => (
