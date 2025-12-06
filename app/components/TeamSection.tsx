@@ -5,7 +5,6 @@ import { collection, getDocs } from "firebase/firestore";
 import { clientDb } from "@/app/lib/firebaseClient";
 import TeamMemberCard from "./TeamMemberCard";
 
-// Optional type for safety
 type TeamMember = {
   id: string;
   name: string;
@@ -17,7 +16,7 @@ type TeamMember = {
 };
 
 export default function TeamSection() {
-  const [founders, setFounders] = useState<TeamMember[]>([])
+  const [founders, setFounders] = useState<TeamMember[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +26,8 @@ export default function TeamSection() {
       try {
         setLoading(true);
 
-        const founderSnap = await getDocs(collection(clientDb, "founders")); // 🔥 client DB
-        const membersSnap = await getDocs(collection(clientDb, "teamMembers")); // 🔥 correct collection
+        const founderSnap = await getDocs(collection(clientDb, "founders"));
+        const membersSnap = await getDocs(collection(clientDb, "teamMembers"));
 
         const foundersData = founderSnap.docs.map((d) => ({
           id: d.id,
@@ -74,8 +73,46 @@ export default function TeamSection() {
 
   return (
     <section id="team" className="mb-20 scroll-mt-20">
-      {/* Founders */}
-      <div id="founders" className="mb-10">
+      {/* 🔹 Header Section */}
+      <div className="mb-12">
+        <span className="inline-flex items-center gap-2 px-3 py-1 text-xs border border-gray-300 rounded-full">
+          <span className="h-2 w-2 rounded-full bg-vblue" />
+          Lab leadership
+        </span>
+
+        <h2 className="mt-3 text-4xl font-normal text-gray-900 tracking-tight">
+          Team
+        </h2>
+
+        <p className="mt-3 text-gray-600 text-lg font-light leading-relaxed max-w-3xl">
+          We’re an interdisciplinary group with roots in MIT, Purdue, and IIT
+          Madras, working across scientific ML, model efficiency, and applied AI.
+        </p>
+
+        {/* 🔹 Toggle Buttons */}
+        <div className="mt-4 flex gap-2 text-sm">
+          <button
+            onClick={() =>
+              document.getElementById("founders")?.scrollIntoView({ behavior: "smooth" })
+            }
+            className="rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:border-vblue hover:text-vblue transition-colors"
+          >
+            Founders
+          </button>
+
+          <button
+            onClick={() =>
+              document.getElementById("core-team")?.scrollIntoView({ behavior: "smooth" })
+            }
+            className="rounded-full border border-gray-300 px-3 py-1 text-gray-700 hover:border-vblue hover:text-vblue transition-colors"
+          >
+            Team
+          </button>
+        </div>
+      </div>
+
+      {/* 🔹 Founders Block */}
+      <div id="founders" className="mb-10 scroll-mt-20">
         <h3 className="text-2xl font-normal text-gray-900 mb-6">Founders</h3>
 
         {founders.length === 0 ? (
@@ -85,7 +122,7 @@ export default function TeamSection() {
             {founders.map((member) => (
               <article
                 key={member.id}
-                className="rounded-lg border border-gray-300 bg-white p-6 text-center hover:border-vblue hover:shadow-md"
+                className="rounded-lg border border-gray-300 bg-white p-6 text-center transition hover:border-vblue hover:shadow-md"
               >
                 <TeamMemberCard {...member} />
               </article>
@@ -94,20 +131,18 @@ export default function TeamSection() {
         )}
       </div>
 
-      {/* Core Team */}
-      <div id="core-team">
+      {/* 🔹 Core Team */}
+      <div id="core-team" className="scroll-mt-20">
         <h3 className="text-2xl font-normal text-gray-900 mb-6">Team</h3>
 
         {teamMembers.length === 0 ? (
-          <p className="text-gray-500 text-sm">
-            Team members will be added soon.
-          </p>
+          <p className="text-gray-500 text-sm">Team members will be added soon.</p>
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {teamMembers.map((member) => (
               <article
                 key={member.id}
-                className="rounded-lg border border-gray-300 bg-white p-2 text-center hover:border-vblue hover:shadow-md"
+                className="rounded-lg border border-gray-300 bg-white p-2 text-center transition hover:border-vblue hover:shadow-md"
               >
                 <TeamMemberCard {...member} small />
               </article>

@@ -15,7 +15,7 @@ export default function TeamMemberCard({
   linkedInUrl,
   small = false,
 }: TeamMemberCardProps) {
-  // Create initials avatar fallback
+ 
   const initials = name
     ? name
         .split(" ")
@@ -25,59 +25,62 @@ export default function TeamMemberCard({
         .toUpperCase()
     : "U";
 
-  const avatarFallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+  const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
     initials
-  )}&background=0D8ABC&color=fff&size=200`;
+  )}&background=0D8ABC&color=fff&size=200&rounded=true`;
 
-  const finalImage =
-    imageUrl && imageUrl.trim() !== "" ? imageUrl : avatarFallback;
+  const avatar = imageUrl && imageUrl.trim() !== "" ? imageUrl : fallbackAvatar;
 
   return (
-    <div
-      className={`text-center ${
-        small ? "scale-90" : ""
-      } transition-transform hover:scale-[1.02]`}
-    >
+    <div className="text-center flex flex-col items-center">
+      {/* Avatar container */}
       <div
-        className={`mx-auto mb-3 overflow-hidden rounded-full border-2 border-vblue 
+        className={`rounded-full overflow-hidden border-2 border-vblue mb-4 
+          flex items-center justify-center
           ${small ? "h-28 w-28" : "h-40 w-40"}`}
       >
         <img
-          src={finalImage}
+          src={avatar}
           alt={name}
           className="h-full w-full object-cover"
           loading="lazy"
         />
       </div>
 
+      {/* Name */}
       <h4
-        className={`font-medium text-gray-900 ${small ? "text-sm" : "text-lg"}`}
+        className={`font-medium text-gray-900 mb-1 
+          ${small ? "text-sm" : "text-lg"}`}
       >
         {name}
       </h4>
 
+      {/* Position */}
       <p
-        className={`font-light text-gray-600 ${small ? "text-xs" : "text-sm"}`}
+        className={`text-gray-600 font-light 
+          ${small ? "text-xs" : "text-sm"}`}
       >
         {title}
       </p>
 
+      {/* Education */}
       {education && (
         <p
-          className={`text-gray-700 mt-1 ${small ? "text-[10px]" : "text-sm"}`}
+          className={`mt-1 text-gray-700 font-light
+            ${small ? "text-[10px]" : "text-xs"}`}
         >
           {education}
         </p>
       )}
 
+      {/* LinkedIn */}
       {linkedInUrl && (
         <a
           href={linkedInUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className={`block mt-2 text-vblue hover:underline ${
-            small ? "text-xs" : "text-sm"
-          }`}
+          className={`mt-3 text-vblue hover:underline 
+            ${small ? "text-xs" : "text-sm"}`}
         >
           LinkedIn →
         </a>
