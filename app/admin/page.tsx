@@ -23,6 +23,17 @@ type Pub = {
   published?: boolean;
 };
 
+type Team = {
+  id?: string;
+  name: string;
+  title: string;
+  education?: string;
+  linkedInUrl?: string;
+  imageUrl?: string;
+  imagePath?: string;
+  published?: boolean;
+};
+
 const toTags = (t: unknown): string[] => {
   if (Array.isArray(t))
     return t
@@ -109,6 +120,274 @@ export default function AdminPage() {
       getToken={getToken}
       logOut={logOut}
     />
+  );
+}
+
+function TeamEditor({
+  getToken,
+}: {
+  getToken: () => Promise<string | undefined>;
+}) {
+  const [team, setTeam] = useState<Team[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  const [form, setForm] = useState<Team>({
+    name: "",
+    title: "",
+    education: "",
+    linkedInUrl: "",
+    imageUrl: "",
+    imagePath: "",
+    published: true,
+  });
+
+  async function loadTeam() {
+    const res = await fetch("/api/team", { cache: "no-store" });
+    const j = await res.json().catch(() => ({ members: [] }));
+    setTeam(j.members || []);
+  }
+
+  useEffect(() => {
+    loadTeam();
+  }, []);
+
+  function reset() {
+    setEditingId(null);
+    setForm({
+      name: "",
+      title: "",
+      education: "",
+      linkedInUrl: "",
+      imageUrl: "",
+      imagePath: "",
+      published: true,
+    });
+  }
+
+  function startEdit(member: Team) {
+    setEditingId(member.id!);
+    setForm({ ...member });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // Upload handler — same style as your publications panel
+  async function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return alert("Select an image");
+
+    setUploading(true);
+
+    const safeName = `${slugify(
+      form.name || "team"
+    )}-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+    const path = `team/${safeName}`;
+    const storageRef = ref(storage, path);
+
+    const task = uploadBytesResumable(storageRef, file);
+
+    task.on(
+      "state_changed",
+      (snap) =>
+        setUploadProgress(
+          Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
+        ),
+      () => {
+        alert("Upload failed");
+        setUploading(false);
+      },
+      async () => {
+        if (form.imagePath && form.imagePath !== path) {
+          try {
+            await deleteObject(ref(storage, form.imagePath));
+          } catch {}
+        }
+        const url = await getDownloadURL(task.snapshot.ref);
+        setForm((f) => ({ ...f, imageUrl: url, imagePath: path }));
+        setUploading(false);
+      }
+    );
+
+    e.currentTarget.value = "";
+  }
+
+  async function save() {
+    setSaving(true);
+    const token = await getToken();
+    if (!token) return alert("Not authorized");
+
+    const payload = { ...form, published: !!form.published };
+
+    const method = editingId ? "PATCH" : "POST";
+    const url = editingId ? `/api/team/${editingId}` : `/api/team`;
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) alert(await res.text());
+
+    await loadTeam();
+    reset();
+    setSaving(false);
+  }
+
+  async function del(id: string) {
+    if (!confirm("Delete member?")) return;
+    const token = await getToken();
+    setDeletingId(id);
+
+    await fetch(`/api/team/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setDeletingId(null);
+    await loadTeam();
+  }
+
+  return (
+    <div className="space-y-6 mt-6">
+      {/* Form */}
+      <div className="border p-4 rounded-md">
+        <h2 className="text-lg mb-3">
+          {editingId ? "Edit Member" : "Add Member"}
+        </h2>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <input
+            className="border px-3 py-2"
+            placeholder="Name"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+          <input
+            className="border px-3 py-2"
+            placeholder="Title"
+            value={form.title}
+            onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+          />
+          <input
+            className="border px-3 py-2"
+            placeholder="Education"
+            value={form.education}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, education: e.target.value }))
+            }
+          />
+          <input
+            className="border px-3 py-2"
+            placeholder="LinkedIn URL"
+            value={form.linkedInUrl}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, linkedInUrl: e.target.value }))
+            }
+          />
+
+          {/* Image Upload UI */}
+          <div className="col-span-2">
+            <label className="text-xs text-gray-600">Image</label>
+            {form.imageUrl ? (
+              <div className="flex items-center gap-3">
+                <img
+                  src={form.imageUrl || undefined}
+                  className="h-20 w-20 object-cover border rounded"
+                />
+                <label className="cursor-pointer px-3 py-1 border rounded text-sm">
+                  Replace
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={pickFile}
+                  />
+                </label>
+                {uploading && <span>{uploadProgress}%</span>}
+              </div>
+            ) : (
+              <label className="cursor-pointer px-3 py-1 border rounded text-sm">
+                Upload image
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={pickFile}
+                />
+              </label>
+            )}
+          </div>
+
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={!!form.published}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, published: e.target.checked }))
+              }
+            />
+            Published
+          </label>
+        </div>
+
+        <button
+          disabled={saving}
+          onClick={save}
+          className="mt-4 bg-vblue text-white px-4 py-2 rounded"
+        >
+          {saving ? "Saving…" : editingId ? "Update" : "Create"}
+        </button>
+      </div>
+
+      {/* List */}
+      <div className="rounded-md border overflow-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b">
+              <th className="px-3 py-2">Name</th>
+              <th className="px-3 py-2">Title</th>
+              <th className="px-3 py-2">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {team.map((m) => (
+              <tr key={m.id} className="border-b hover:bg-gray-50">
+                <td className="px-3 py-2">{m.name}</td>
+                <td className="px-3 py-2">{m.title}</td>
+                <td className="px-3 py-2 space-x-3">
+                  <button className="text-vblue" onClick={() => startEdit(m)}>
+                    Edit
+                  </button>
+                  <button
+                    className="text-red-600"
+                    disabled={deletingId === m.id}
+                    onClick={() => del(m.id!)}
+                  >
+                    {deletingId === m.id ? "Deleting…" : "Delete"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+
+            {!team.length && (
+              <tr>
+                <td colSpan={3} className="px-3 py-4 text-gray-600">
+                  No team members found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -571,6 +850,17 @@ function AdminPanel({
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* ================= TEAM ADMIN PANEL ================= */}
+      <div className="mt-20">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-normal">Admin • Team Members</h1>
+        </div>
+
+        {/* Team Editor */}
+        <TeamEditor getToken={getToken} />
       </div>
     </div>
   );
