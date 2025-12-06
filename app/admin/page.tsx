@@ -177,7 +177,10 @@ function TeamEditor({
   function startEdit(member: Team) {
     setEditingId(member.id!);
     setForm({ ...member });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Scroll to the Team section headline
+    document
+      .getElementById("team-section")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   async function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -218,6 +221,15 @@ function TeamEditor({
     e.currentTarget.value = "";
   }
 
+  async function removeImage() {
+    if (form.imagePath) {
+      try {
+        await deleteObject(ref(storage, form.imagePath));
+      } catch {}
+    }
+    setForm((f) => ({ ...f, imageUrl: "", imagePath: "" }));
+  }
+
   async function save() {
     setSaving(true);
     const token = await getToken();
@@ -254,8 +266,8 @@ function TeamEditor({
   }
 
   return (
-    <div className="space-y-6 mt-6">
-      {/* Form section */}
+    <div id="team-section" className="space-y-6 mt-6 scroll-mt-20">
+      {/* Form */}
       <div className="border p-4 rounded-md">
         <h2 className="text-lg mb-3">
           {editingId ? "Edit Member" : "Add Member"}
@@ -290,38 +302,64 @@ function TeamEditor({
             }
           />
 
-          <div className="col-span-2">
-            <label className="text-xs text-gray-600">Image</label>
+          {/* Image upload section */}
+          <div className="flex flex-col gap-1 md:col-span-2">
+            <label className="text-xs text-gray-600 block mb-1">Image</label>
             {form.imageUrl ? (
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-4">
                 <img
                   src={form.imageUrl}
-                  className="h-16 w-16 sm:h-20 sm:w-20 object-cover border rounded"
+                  alt="Preview"
+                  className="h-20 w-20 sm:h-24 sm:w-24 object-cover border rounded"
                 />
-                <label className="cursor-pointer px-3 py-1 border rounded text-sm">
-                  Replace
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={pickFile}
-                  />
-                </label>
-                {uploading && <span>{uploadProgress}%</span>}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Replace */}
+                  <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50">
+                    Replace
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={pickFile}
+                    />
+                  </label>
+
+                  {/* Remove */}
+                  <button
+                    type="button"
+                    onClick={removeImage}
+                    className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+                  >
+                    Remove
+                  </button>
+
+                  {/* Upload progress */}
+                  {uploading && (
+                    <span className="text-sm text-gray-600">
+                      {uploadProgress}%
+                    </span>
+                  )}
+                </div>
               </div>
             ) : (
-              <label className="cursor-pointer px-3 py-1 border rounded text-sm">
-                Upload image
-                <input
-                  type="file"
-                  className="hidden"
-                  accept="image/*"
-                  onChange={pickFile}
-                />
-              </label>
+              <div className="flex items-center gap-3">
+                <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50 w-fit">
+                  Upload image
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={pickFile }
+                  />
+                </label>
+                {uploading && (
+                  <span className="text-sm text-gray-600">
+                    {uploadProgress}%
+                  </span>
+                )}
+              </div>
             )}
           </div>
-
           <label className="inline-flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -333,6 +371,7 @@ function TeamEditor({
             Published
           </label>
         </div>
+
         <button
           disabled={saving}
           onClick={save}
@@ -342,7 +381,7 @@ function TeamEditor({
         </button>
       </div>
 
-      {/* Toolbar with search */}
+      {/* Search bar */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-normal">All Team Members</h2>
         <input
@@ -353,11 +392,11 @@ function TeamEditor({
         />
       </div>
 
-      {/* List */}
+      {/* Table */}
       <div className="w-full overflow-x-auto rounded-md border">
-        <table className="min-w-[500px] sm:min-w-full text-xs sm:text-sm">
+        <table className="min-w-[600px] sm:min-w-full text-xs sm:text-sm">
           <thead>
-            <tr className="bg-gray-50 border-b">
+            <tr className="bg-gray-50 border-b text-left">
               <th className="px-3 py-2">Name</th>
               <th className="px-3 py-2">Title</th>
               <th className="px-3 py-2">Actions</th>
@@ -366,14 +405,17 @@ function TeamEditor({
           <tbody>
             {filteredTeam.map((m) => (
               <tr key={m.id} className="border-b hover:bg-gray-50">
-                <td className="px-3 py-2">{m.name}</td>
-                <td className="px-3 py-2">{m.title}</td>
-                <td className="px-3 py-2 space-x-2">
-                  <button className="text-vblue" onClick={() => startEdit(m)}>
+                <td className="px-3 py-2 align-top">{m.name}</td>
+                <td className="px-3 py-2 align-top">{m.title}</td>
+                <td className="px-3 py-2 align-top space-x-2">
+                  <button
+                    className="text-vblue hover:underline"
+                    onClick={() => startEdit(m)}
+                  >
                     Edit
                   </button>
                   <button
-                    className="text-red-600"
+                    className="text-red-600 hover:underline disabled:opacity-50"
                     disabled={deletingId === m.id}
                     onClick={() => del(m.id!)}
                   >
@@ -741,9 +783,9 @@ function AdminPanel({
         <table className="min-w-[700px] sm:min-w-full text-xs sm:text-sm">
           <thead>
             <tr className="bg-gray-50 border-b">
-              <th className="px-3 py-2">Title</th>
+              <th className="px-3 py-2 text-left">Title</th>
               <th className="px-3 py-2">Year</th>
-              <th className="px-3 py-2">Venue</th>
+              <th className="px-3 py-2 ">Venue</th>
               <th className="px-3 py-2">Tags</th>
               <th className="px-3 py-2">Published</th>
               <th className="px-3 py-2">Actions</th>
@@ -754,8 +796,10 @@ function AdminPanel({
               <tr key={p.id} className="border-b hover:bg-gray-50">
                 <td className="px-3 py-2">{p.title}</td>
                 <td className="px-3 py-2">{p.year ?? ""}</td>
-                <td className="px-3 py-2">{p.venue ?? ""}</td>
-                <td className="px-3 py-2">{toTags(p.tags).join(", ")}</td>
+                <td className="px-3 py-2 text-center">{p.venue ?? ""}</td>
+                <td className="px-3 py-2 text-center">
+                  {toTags(p.tags).join(", ")}
+                </td>
                 <td className="px-3 py-2">{p.published ? "Yes" : "No"}</td>
                 <td className="px-3 py-2 whitespace-nowrap space-x-2">
                   <button
