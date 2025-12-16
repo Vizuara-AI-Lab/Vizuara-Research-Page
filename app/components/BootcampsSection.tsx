@@ -67,7 +67,7 @@ export default function BootcampsSection() {
     },
     {
       title: "Computer Vision Research Bootcamp",
-      level: "Intermediate to Advanced",
+      level: "Beginner to Intermediate",
       duration: "4-Month Intensive Research Program",
       highlights:
         "Build strong foundations, work on impactful problems in CV, and publish at top-tier venues.",
