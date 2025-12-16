@@ -349,7 +349,7 @@ function TeamEditor({
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={pickFile }
+                    onChange={pickFile}
                   />
                 </label>
                 {uploading && (
@@ -779,55 +779,82 @@ function AdminPanel({
         />
       </div>
 
-      <div className="w-full overflow-x-auto rounded-md border border-gray-200">
-        <table className="min-w-[700px] sm:min-w-full text-xs sm:text-sm">
-          <thead>
-            <tr className="bg-gray-50 border-b">
-              <th className="px-3 py-2 text-left">Title</th>
-              <th className="px-3 py-2">Year</th>
-              <th className="px-3 py-2 ">Venue</th>
-              <th className="px-3 py-2">Tags</th>
-              <th className="px-3 py-2">Published</th>
-              <th className="px-3 py-2">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id} className="border-b hover:bg-gray-50">
-                <td className="px-3 py-2">{p.title}</td>
-                <td className="px-3 py-2">{p.year ?? ""}</td>
-                <td className="px-3 py-2 text-center">{p.venue ?? ""}</td>
-                <td className="px-3 py-2 text-center">
-                  {toTags(p.tags).join(", ")}
-                </td>
-                <td className="px-3 py-2">{p.published ? "Yes" : "No"}</td>
-                <td className="px-3 py-2 whitespace-nowrap space-x-2">
-                  <button
-                    className="text-vblue hover:underline"
-                    onClick={() => startEdit(p)}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    className="text-red-600 hover:underline disabled:opacity-50"
-                    disabled={deletingId === p.id}
-                    onClick={() => del(p.id!)}
-                  >
-                    {deletingId === p.id ? "Deleting…" : "Delete"}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td className="px-3 py-4 text-gray-600" colSpan={6}>
-                  No publications found.
-                </td>
-              </tr>
+     <div className="w-full overflow-x-auto rounded-md border border-gray-200">
+  <table className="min-w-[900px] sm:min-w-full text-xs sm:text-sm table-fixed">
+    <thead>
+      <tr className="bg-gray-50 border-b">
+        {/* Title: wide, left */}
+        <th className="px-3 py-2 text-left w-[40%]">Title</th>
+        {/* Year: narrow, center */}
+        <th className="px-3 py-2 text-center w-[6rem]">Year</th>
+        {/* Venue: medium, left */}
+        <th className="px-3 py-2 text-left w-[12rem]">Venue</th>
+        {/* Tags: medium, left */}
+        <th className="px-3 py-2 text-left w-[12rem]">Tags</th>
+        {/* Thumb: narrow, center */}
+        <th className="px-3 py-2 text-center w-[5rem]">Thumb</th>
+        {/* Published: narrow, center */}
+        <th className="px-3 py-2 text-center w-[6rem]">Published</th>
+        {/* Actions: narrow, center */}
+        <th className="px-3 py-2 text-center w-[7rem]">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {filtered.map((p) => (
+        <tr key={p.id} className="border-b hover:bg-gray-50">
+          <td className="px-3 py-2 align-middle text-left">{p.title}</td>
+          <td className="px-3 py-2 align-middle text-center">
+            {p.year ?? ""}
+          </td>
+          <td className="px-3 py-2 align-middle text-left">
+            {p.venue ?? ""}
+          </td>
+          <td className="px-3 py-2 align-middle text-left">
+            {toTags(p.tags).join(", ")}
+          </td>
+          <td className="px-3 py-2 align-middle text-center">
+            {p.imageUrl ? (
+              <img
+                src={p.imageUrl}
+                alt={p.title}
+                className="h-10 w-10 object-cover rounded border mx-auto"
+              />
+            ) : (
+              <span className="text-gray-400 text-[11px] italic">
+                No image
+              </span>
             )}
-          </tbody>
-        </table>
-      </div>
+          </td>
+          <td className="px-3 py-2 align-middle text-center">
+            {p.published ? "Yes" : "No"}
+          </td>
+          <td className="px-3 py-2 align-middle text-center whitespace-nowrap space-x-2">
+            <button
+              className="text-vblue hover:underline"
+              onClick={() => startEdit(p)}
+            >
+              Edit
+            </button>
+            <button
+              className="text-red-600 hover:underline disabled:opacity-50"
+              disabled={deletingId === p.id}
+              onClick={() => del(p.id!)}
+            >
+              {deletingId === p.id ? "Deleting…" : "Delete"}
+            </button>
+          </td>
+        </tr>
+      ))}
+      {filtered.length === 0 && (
+        <tr>
+          <td className="px-3 py-4 text-gray-600 text-left" colSpan={7}>
+            No publications found.
+          </td>
+        </tr>
+      )}
+    </tbody>
+  </table>
+</div>
 
       <div className="mt-12 sm:mt-20">
         <div className="flex flex-wrap items-center justify-between gap-3">

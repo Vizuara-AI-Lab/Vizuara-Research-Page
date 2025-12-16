@@ -1,4 +1,4 @@
-import BootcampCard from './BootcampCard';
+import BootcampCard from "./BootcampCard";
 
 interface SmallStatCardProps {
   value: string;
@@ -16,75 +16,94 @@ function SmallStatCard({ value, label }: SmallStatCardProps) {
 
 export default function BootcampsSection() {
   const bootcamps = [
-   {
-  title: 'Reinforcement Learning Research Bootcamp',
-  level: 'Intermediate to Advanced',
-  duration: '7 weeks of intensive foundations + 3 months of hands-on research',
-  highlights:
-    'Comprehensive program to write high-quality research papers in Reinforcement Learning',
-  participants: 'Open for applications',
-  link: 'https://rlresearcherbootcamp.vizuara.ai/',
-  isHighlighted: true,
-},
     {
-      title: 'Scientific Machine Learning Bootcamp',
-      level: 'Advanced',
-      duration: '4 months',
-      highlights: 'PINNs, Scientific Computing, Publication Guidance',
-      participants: '80+ Participants',
-      link: 'https://flyvidesh.online/ml-bootcamp/',
-      isHighlighted: true,
-    },
-    {
-      title: 'ML/DL Research Bootcamp',
-      level: 'Intermediate to Advanced',
-      duration: '4 months',
+      title: "Reinforcement Learning Research Bootcamp",
+      level: "Intermediate to Advanced",
+      duration:
+        "7 weeks of intensive foundations + 3 months of hands-on research",
       highlights:
-        'Deep Learning Architectures, Research Papers, Industry Applications',
-      participants: '30+ Participants',
-      link: 'https://flyvidesh.online/ml-dl-bootcamp/',
+        "Comprehensive program to write high-quality research papers in Reinforcement Learning",
+      participants: "Open for applications",
+      link: "https://rlresearcherbootcamp.vizuara.ai/",
       isHighlighted: true,
     },
     {
-      title: 'Gen AI Professional Bootcamp',
-      level: 'Professional',
-      duration: '4 months',
+      title: "Scientific Machine Learning Bootcamp",
+      level: "Advanced",
+      duration: "4 months",
+      highlights: "PINNs, Scientific Computing, Publication Guidance",
+      participants: "80+ Participants",
+      link: "https://flyvidesh.online/ml-bootcamp/",
+      isHighlighted: true,
+    },
+    {
+      title: "ML/DL Research Bootcamp",
+      level: "Intermediate to Advanced",
+      duration: "4 months",
       highlights:
-        'Advanced Model Architectures, Research Methodologies, Novel Algorithm Development',
-      participants: '40+ Participants',
-      link: 'https://flyvidesh.online/gen-ai-professional-bootcamp/',
+        "Deep Learning Architectures, Research Papers, Industry Applications",
+      participants: "30+ Participants",
+      link: "https://flyvidesh.online/ml-dl-bootcamp/",
       isHighlighted: true,
     },
     {
-      title: 'AI High School Research Bootcamp',
-      level: 'Beginner to Intermediate',
-      duration: '8 weeks',
-      highlights: 'Research Fundamentals, Mentorship, College Prep',
-      participants: '25+ Participants',
-      link: 'https://ai-highschool-research.vizuara.ai/',
+      title: "Gen AI Professional Bootcamp",
+      level: "Professional",
+      duration: "4 months",
+      highlights:
+        "Advanced Model Architectures, Research Methodologies, Novel Algorithm Development",
+      participants: "40+ Participants",
+      link: "https://flyvidesh.online/gen-ai-professional-bootcamp/",
+      isHighlighted: true,
+    },
+    {
+      title: "AI High School Research Bootcamp",
+      level: "Beginner to Intermediate",
+      duration: "8 weeks",
+      highlights: "Research Fundamentals, Mentorship, College Prep",
+      participants: "25+ Participants",
+      link: "https://ai-highschool-research.vizuara.ai/",
+      isHighlighted: true,
+    },
+    {
+      title: "Computer Vision Research Bootcamp",
+      level: "Intermediate to Advanced",
+      duration: "4-Month Intensive Research Program",
+      highlights:
+        "Build strong foundations, work on impactful problems in CV, and publish at top-tier venues.",
+      participants: "Open for applications",
+      link: "https://cvresearchbootcamp.vizuara.ai/",
       isHighlighted: true,
     },
   ];
 
   const stats = [
-    { value: '5', label: 'Specialized Programs' }, // updated count
-    { value: '120+', label: 'Participants Trained' },
-    { value: '15+', label: 'Research Publications' },
+    { value: "5", label: "Specialized Programs" }, // updated count
+    { value: "120+", label: "Participants Trained" },
+    { value: "15+", label: "Research Publications" },
   ];
 
   return (
-    <section id="bootcamps" className="mb-20 scroll-mt-20" aria-labelledby="bootcamps-title">
+    <section
+      id="bootcamps"
+      className="mb-20 scroll-mt-20"
+      aria-labelledby="bootcamps-title"
+    >
       {/* Header */}
       <div className="mb-4">
         <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-700">
           <span className="h-2 w-2 rounded-full bg-vblue" />
           Programs
         </div>
-        <h2 id="bootcamps-title" className="mt-3 text-3xl font-normal text-gray-900 tracking-tight">
+        <h2
+          id="bootcamps-title"
+          className="mt-3 text-3xl font-normal text-gray-900 tracking-tight"
+        >
           Research Bootcamps
         </h2>
         <p className="text-lg text-gray-600 mt-2 mb-6 leading-relaxed font-light">
-          Intensive training programs designed to accelerate your journey in AI and ML research.
+          Intensive training programs designed to accelerate your journey in AI
+          and ML research.
         </p>
       </div>
 
