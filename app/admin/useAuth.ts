@@ -9,23 +9,29 @@ type AdminState = { isAdmin: boolean; email?: string | null };
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // auth loading
+  const [loading, setLoading] = useState(true);
   const [admin, setAdmin] = useState<AdminState>({ isAdmin: false, email: null });
-  const [adminLoading, setAdminLoading] = useState(false); // server check
-  const [adminChecked, setAdminChecked] = useState(false); // server check finished
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminChecked, setAdminChecked] = useState(false);
 
   const signingIn = useRef(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
+      //  Reset admin state at the START of each auth change
+      // This prevents the "Access Denied" flash
+      setAdminChecked(false);
+      setAdminLoading(true);
+      
       setUser(u);
       setLoading(false);
 
       if (u) {
         try {
-          setAdminLoading(true);
           const token = await u.getIdToken();
-          const res = await fetch('/api/admin/me', { headers: { Authorization: `Bearer ${token}` } });
+          const res = await fetch('/api/admin/me', { 
+            headers: { Authorization: `Bearer ${token}` } 
+          });
           const j = await res.json().catch(() => ({ isAdmin: false }));
           setAdmin({ isAdmin: !!j?.isAdmin, email: u.email });
         } catch {
