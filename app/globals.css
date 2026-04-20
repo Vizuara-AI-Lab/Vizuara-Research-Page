@@ -1,61 +1,85 @@
 @import "tailwindcss";
 
+/* ── Theme: Royal Blue & Cream ── */
+/* #0118D8 deep blue · #1B56FD bright blue · #E9DFC3 cream · #FFF8F8 off-white */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --vblue: #2596be;
-  --vpink: #ff40ff;
-  --vyellow: #fdbe4a;
+  --ink: #0A0E2A;
+  --steel: #8B8FA3;
+  --parchment: #E9DFC3;
+  --cream: #E9DFC3;
+  --bg: #FFF8F8;
+  --surface: #FFFBFB;
+  --surface-alt: #F2EDE0;
+  --fg: #0A0E2A;
+  --fg-muted: #5C5F73;
+  --border: #DDD8C8;
+  --accent: #0118D8;
+  --accent-hover: #1B56FD;
+  --teal: #0118D8;
+  --highlight: #E9DFC3;
+}
+
+.dark {
+  --ink: #E8E6DF;
+  --steel: #8A95A0;
+  --parchment: #1A1D30;
+  --cream: #141728;
+  --bg: #07091A;
+  --surface: #0D1025;
+  --surface-alt: #151835;
+  --fg: #E8E6DF;
+  --fg-muted: #8A95A0;
+  --border: #1E2140;
+  --accent: #1B56FD;
+  --accent-hover: #5B8AFF;
+  --teal: #1B56FD;
+  --highlight: #151835;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-eb-garamond);
-  --color-vblue: var(--vblue);
-  --color-vpink: var(--vpink);
-  --color-vyellow: var(--vyellow);
+  --color-ink: var(--ink);
+  --color-steel: var(--steel);
+  --color-parchment: var(--parchment);
+  --color-cream: var(--cream);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-teal: var(--teal);
+  --color-highlight: var(--highlight);
+  --font-sans: var(--font-figtree);
 }
+
+html { scroll-behavior: smooth; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-eb-garamond), Georgia, serif;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-figtree), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-html {
-  scroll-behavior: smooth;
-}
+* { box-sizing: border-box; }
 
-* {
-  box-sizing: border-box;
-}
+::selection { background: var(--parchment); color: var(--ink); }
 
-/* Radix UI Accordion Animations */
-@keyframes accordion-down {
-  from {
-    height: 0;
-  }
-  to {
-    height: var(--radix-accordion-content-height);
-  }
-}
+@keyframes accordion-down { from { height: 0; } to { height: var(--radix-accordion-content-height); } }
+@keyframes accordion-up { from { height: var(--radix-accordion-content-height); } to { height: 0; } }
+.animate-accordion-down { animation: accordion-down 0.3s ease-out; }
+.animate-accordion-up { animation: accordion-up 0.3s ease-out; }
 
-@keyframes accordion-up {
-  from {
-    height: var(--radix-accordion-content-height);
-  }
-  to {
-    height: 0;
-  }
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-.animate-accordion-down {
-  animation: accordion-down 0.3s ease-out;
-}
-
-.animate-accordion-up {
-  animation: accordion-up 0.3s ease-out;
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent);
 }

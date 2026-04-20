@@ -1,16 +1,17 @@
-// app/layout.tsx
 import "./globals.css";
 import TopNavbar from "./components/TopNavbar";
-import { EB_Garamond } from "next/font/google";
+import { Figtree } from "next/font/google";
+import { ThemeProvider } from "next-themes";
 
-const ebg = EB_Garamond({
+const figtree = Figtree({
   subsets: ["latin"],
-  variable: "--font-eb-garamond",
+  variable: "--font-figtree",
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata = {
-  title: "Vizuara AI Labs",
-  description: "Research • Publications • People",
+  title: "Vizuara Research Bootcamps",
+  description: "AI & ML Research Programs · Publications · People",
 };
 
 export default function RootLayout({
@@ -19,14 +20,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={ebg.variable}>
-      <body className="antialiased pt-16">
-        <TopNavbar />
-        <main className="min-h-screen">
-          <div className="mx-auto w-full max-w-7xl px-6 py-12 md:px-12 md:py-16">
-            {children}
-          </div>
-        </main>
+    <html lang="en" className={figtree.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: `try{localStorage.removeItem('theme');localStorage.removeItem('vizuara-theme')}catch(e){}` }} />
+      </head>
+      <body className="antialiased">
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="vizuara-theme">
+          <TopNavbar />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,5 +1,10 @@
-// app/team/page.tsx
-import TeamSection from '../components/TeamSection';
+import TeamSection from "../components/TeamSection";
 export default function Page() {
-  return <TeamSection />;
+  return (
+    <main className="min-h-screen pt-20 pb-16">
+      <div className="mx-auto w-full max-w-7xl px-6">
+        <TeamSection />
+      </div>
+    </main>
+  );
 }

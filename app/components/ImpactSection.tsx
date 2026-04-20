@@ -1,64 +1,54 @@
-import StatCard from "./StatCard";
+"use client";
+
+import AnimatedSection from "./AnimatedSection";
+import AnimatedCounter from "./AnimatedCounter";
+import { FaFlask, FaFileLines, FaUsers, FaArrowRight } from "react-icons/fa6";
 
 export default function ImpactSection() {
   const stats = [
-    { value: "10+", label: "Active Research Areas" },
-    { value: "20+", label: "Published Papers" },
-    { value: "20+", label: "Research Team" },
+    { n: 10, s: "+", label: "Active Research Areas", icon: <FaFlask className="w-5 h-5" /> },
+    { n: 20, s: "+", label: "Published Papers", icon: <FaFileLines className="w-5 h-5" /> },
+    { n: 20, s: "+", label: "Research Team", icon: <FaUsers className="w-5 h-5" /> },
   ];
 
   return (
-    <section id="impact" className="mb-20 scroll-mt-20">
-      {/* Header */}
-      <div className="mb-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-700">
-          <span className="h-2 w-2 rounded-full bg-vblue" />
-          Impact snapshot
-        </div>
-        <h2 className="mt-3 text-3xl font-normal text-gray-900 tracking-tight">
-          Impact
+    <section id="impact" className="scroll-mt-20">
+      <AnimatedSection>
+        <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-fg-muted">
+          <span className="w-6 h-px bg-steel" /> Impact
+        </span>
+        <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-fg tracking-tight">
+          Our Footprint
         </h2>
-        <p className="text-gray-600 font-light mt-2">
-          A quick view of our lab’s footprint across research areas,
-          publications, and people.
+        <p className="mt-3 text-fg-muted max-w-xl leading-relaxed">
+          A snapshot of our growing impact across research, education, and open science.
         </p>
-      </div>
+      </AnimatedSection>
 
-      {/* Panel with stats + CTAs */}
-      <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-blue-50/30 to-transparent p-6 md:p-8">
-        <div className="grid gap-6 md:grid-cols-3">
-          {stats.map((stat, index) => (
-            <StatCard
-              key={index}
-              value={stat.value}
-              label={stat.label}
-              isHighlighted
-            />
+      <AnimatedSection delay={0.1}>
+        <div className="mt-12 grid gap-6 sm:grid-cols-3">
+          {stats.map((stat) => (
+            <div key={stat.label} className="text-center p-8 rounded-xl border border-border bg-surface transition-all hover:shadow-md">
+              <div className="flex justify-center text-steel mb-3">{stat.icon}</div>
+              <div className="text-4xl font-bold text-fg mb-1">
+                <AnimatedCounter target={stat.n} suffix={stat.s} />
+              </div>
+              <div className="text-sm text-fg-muted">{stat.label}</div>
+            </div>
           ))}
         </div>
+      </AnimatedSection>
 
-        {/* CTAs */}
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-gray-600 font-light">
-            Data reflects the latest updates from our publications and active
-            projects.
-          </p>
-          <div className="flex gap-3">
-            <a
-              href="/publications"
-              className="inline-flex items-center rounded-md bg-vblue px-4 py-2 text-white hover:opacity-90 text-sm"
-            >
-              View publications →
-            </a>
-            <a
-              href="/research-areas"
-              className="inline-flex items-center rounded-md border border-vblue px-4 py-2 text-vblue hover:bg-blue-50/50 text-sm"
-            >
-              Explore research areas
-            </a>
-          </div>
+      <AnimatedSection delay={0.2}>
+        <div className="mt-8 flex items-center justify-center gap-4">
+          <a href="/publications" className="inline-flex items-center gap-2 bg-accent text-white dark:text-bg px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors cursor-pointer">
+            View publications <FaArrowRight className="w-3 h-3" />
+          </a>
+          <a href="/research-areas" className="inline-flex items-center gap-2 border border-border px-5 py-2.5 rounded-lg text-sm font-medium text-fg hover:bg-surface-alt transition-colors cursor-pointer">
+            Explore research areas
+          </a>
         </div>
-      </div>
+      </AnimatedSection>
     </section>
   );
 }

@@ -1,137 +1,90 @@
-import BootcampCard from "./BootcampCard";
+"use client";
 
-interface SmallStatCardProps {
-  value: string;
-  label: string;
-}
+import AnimatedSection from "./AnimatedSection";
+import AnimatedCounter from "./AnimatedCounter";
+import {
+  FaBrain, FaAtom, FaNetworkWired, FaRobot, FaGraduationCap, FaEye,
+  FaClock, FaArrowRight, FaBookOpen, FaUsers, FaFileLines, FaEnvelope,
+} from "react-icons/fa6";
 
-function SmallStatCard({ value, label }: SmallStatCardProps) {
-  return (
-    <div className="rounded-lg bg-gray-50 border border-gray-300 p-6 text-center transition-shadow hover:shadow-md">
-      <div className="text-3xl font-normal text-gray-900 mb-1">{value}</div>
-      <div className="text-gray-700 font-light text-sm">{label}</div>
-    </div>
-  );
-}
+const bootcamps = [
+  { title: "Reinforcement Learning Research Bootcamp", level: "Intermediate to Advanced", duration: "7 weeks + 3 months research", highlights: "Comprehensive program to write high-quality research papers in Reinforcement Learning", participants: "Open for applications", link: "https://rlresearcherbootcamp.vizuara.ai/", icon: <FaBrain />, color: "#7C3AED" },
+  { title: "Scientific Machine Learning Bootcamp", level: "Advanced", duration: "4 months", highlights: "PINNs, Scientific Computing, Publication Guidance", participants: "80+ Participants", link: "https://flyvidesh.online/ml-bootcamp/", icon: <FaAtom />, color: "#0891B2" },
+  { title: "ML/DL Research Bootcamp", level: "Intermediate to Advanced", duration: "4 months", highlights: "Deep Learning Architectures, Research Papers, Industry Applications", participants: "30+ Participants", link: "https://flyvidesh.online/ml-dl-bootcamp/", icon: <FaNetworkWired />, color: "#0118D8" },
+  { title: "Gen AI Professional Bootcamp", level: "Professional", duration: "4 months", highlights: "Advanced Model Architectures, Research Methodologies, Novel Algorithm Development", participants: "40+ Participants", link: "https://flyvidesh.online/gen-ai-professional-bootcamp/", icon: <FaRobot />, color: "#2563EB" },
+  { title: "AI High School Research Bootcamp", level: "Beginner to Intermediate", duration: "8 weeks", highlights: "Research Fundamentals, Mentorship, College Prep", participants: "25+ Participants", link: "https://ai-highschool-research.vizuara.ai/", icon: <FaGraduationCap />, color: "#D97706" },
+  { title: "Computer Vision Research Bootcamp", level: "Beginner to Intermediate", duration: "4-Month Intensive Program", highlights: "Build strong foundations, work on impactful problems in CV, and publish at top-tier venues.", participants: "Open for applications", link: "https://cvresearchbootcamp.vizuara.ai/", icon: <FaEye />, color: "#DC2626" },
+];
 
 export default function BootcampsSection() {
-  const bootcamps = [
-    {
-      title: "Reinforcement Learning Research Bootcamp",
-      level: "Intermediate to Advanced",
-      duration:
-        "7 weeks of intensive foundations + 3 months of hands-on research",
-      highlights:
-        "Comprehensive program to write high-quality research papers in Reinforcement Learning",
-      participants: "Open for applications",
-      link: "https://rlresearcherbootcamp.vizuara.ai/",
-      isHighlighted: true,
-    },
-    {
-      title: "Scientific Machine Learning Bootcamp",
-      level: "Advanced",
-      duration: "4 months",
-      highlights: "PINNs, Scientific Computing, Publication Guidance",
-      participants: "80+ Participants",
-      link: "https://flyvidesh.online/ml-bootcamp/",
-      isHighlighted: true,
-    },
-    {
-      title: "ML/DL Research Bootcamp",
-      level: "Intermediate to Advanced",
-      duration: "4 months",
-      highlights:
-        "Deep Learning Architectures, Research Papers, Industry Applications",
-      participants: "30+ Participants",
-      link: "https://flyvidesh.online/ml-dl-bootcamp/",
-      isHighlighted: true,
-    },
-    {
-      title: "Gen AI Professional Bootcamp",
-      level: "Professional",
-      duration: "4 months",
-      highlights:
-        "Advanced Model Architectures, Research Methodologies, Novel Algorithm Development",
-      participants: "40+ Participants",
-      link: "https://flyvidesh.online/gen-ai-professional-bootcamp/",
-      isHighlighted: true,
-    },
-    {
-      title: "AI High School Research Bootcamp",
-      level: "Beginner to Intermediate",
-      duration: "8 weeks",
-      highlights: "Research Fundamentals, Mentorship, College Prep",
-      participants: "25+ Participants",
-      link: "https://ai-highschool-research.vizuara.ai/",
-      isHighlighted: true,
-    },
-    {
-      title: "Computer Vision Research Bootcamp",
-      level: "Beginner to Intermediate",
-      duration: "4-Month Intensive Research Program",
-      highlights:
-        "Build strong foundations, work on impactful problems in CV, and publish at top-tier venues.",
-      participants: "Open for applications",
-      link: "https://cvresearchbootcamp.vizuara.ai/",
-      isHighlighted: true,
-    },
-  ];
-
-  const stats = [
-    { value: "5", label: "Specialized Programs" }, // updated count
-    { value: "120+", label: "Participants Trained" },
-    { value: "15+", label: "Research Publications" },
-  ];
-
   return (
-    <section
-      id="bootcamps"
-      className="mb-20 scroll-mt-20"
-      aria-labelledby="bootcamps-title"
-    >
-      {/* Header */}
-      <div className="mb-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-700">
-          <span className="h-2 w-2 rounded-full bg-vblue" />
-          Programs
-        </div>
-        <h2
-          id="bootcamps-title"
-          className="mt-3 text-3xl font-normal text-gray-900 tracking-tight"
-        >
+    <section id="bootcamps" className="scroll-mt-20">
+      <AnimatedSection>
+        <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-fg-muted">
+          <span className="w-6 h-px bg-steel" /> Programs
+        </span>
+        <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-fg tracking-tight">
           Research Bootcamps
         </h2>
-        <p className="text-lg text-gray-600 mt-2 mb-6 leading-relaxed font-light">
-          Intensive training programs designed to accelerate your journey in AI
-          and ML research.
+        <p className="mt-3 text-fg-muted max-w-2xl leading-relaxed">
+          Intensive training programs designed to accelerate your journey in AI and ML research.
         </p>
-      </div>
+      </AnimatedSection>
 
-      {/* Bootcamp cards */}
-      <div className="grid gap-6 md:grid-cols-2 mb-10">
+      <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {bootcamps.map((b, i) => (
-          <BootcampCard key={i} {...b} />
+          <AnimatedSection key={i} delay={i * 0.06}>
+            <a href={b.link} target="_blank" rel="noopener noreferrer"
+              className="group flex flex-col h-full rounded-xl border border-border bg-surface p-6 transition-all hover:shadow-lg hover:border-steel/40 hover:-translate-y-0.5 cursor-pointer">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg text-white mb-4" style={{ backgroundColor: b.color }}>
+                <span className="text-lg">{b.icon}</span>
+              </div>
+              <h3 className="text-base font-semibold text-fg leading-snug mb-2">{b.title}</h3>
+              <div className="flex flex-wrap gap-2 mb-3">
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface-alt text-fg-muted font-medium">{b.level}</span>
+                <span className="text-[11px] px-2 py-0.5 rounded-md bg-surface-alt text-fg-muted font-medium flex items-center gap-1">
+                  <FaClock className="w-2.5 h-2.5" />{b.duration}
+                </span>
+              </div>
+              <p className="text-sm text-fg-muted leading-relaxed mb-4 grow">{b.highlights}</p>
+              <div className="flex items-center justify-between pt-3 border-t border-border">
+                <span className={`text-xs font-medium ${b.participants.includes("Open") ? "text-accent dark:text-accent" : "text-fg-muted"}`}>
+                  {b.participants.includes("Open") && <span className="inline-block w-1.5 h-1.5 rounded-full bg-accent mr-1.5 animate-pulse" />}
+                  {b.participants}
+                </span>
+                <FaArrowRight className="w-3 h-3 text-fg-muted group-hover:text-fg group-hover:translate-x-0.5 transition-all" />
+              </div>
+            </a>
+          </AnimatedSection>
         ))}
       </div>
 
-      {/* Stats panel */}
-      <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-blue-50/30 to-transparent p-6 md:p-8 mb-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          {stats.map((s, i) => (
-            <SmallStatCard key={i} value={s.value} label={s.label} />
+      <AnimatedSection delay={0.2}>
+        <div className="mt-12 flex items-center justify-center gap-10 sm:gap-16 py-8 rounded-xl bg-surface-alt/50">
+          {[
+            { icon: <FaBookOpen />, n: 6, l: "Programs" },
+            { icon: <FaUsers />, n: 120, s: "+", l: "Participants" },
+            { icon: <FaFileLines />, n: 15, s: "+", l: "Publications" },
+          ].map((s) => (
+            <div key={s.l} className="text-center">
+              <div className="flex justify-center text-steel mb-2">{s.icon}</div>
+              <div className="text-2xl font-bold text-fg">
+                <AnimatedCounter target={s.n} suffix={s.s || ""} />
+              </div>
+              <div className="text-xs text-fg-muted mt-0.5">{s.l}</div>
+            </div>
           ))}
         </div>
-      </div>
+      </AnimatedSection>
 
-      {/* CTA */}
-      <a
-        href="mailto:contact@vizuara.ai?subject=Bootcamp Enrollment Inquiry"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex w-full md:w-auto items-center justify-center px-8 py-3 rounded-md bg-vblue text-white font-normal hover:opacity-90 transition-colors shadow-md hover:shadow-lg"
-      >
-        Contact Us for Enrollment →
-      </a>
+      <AnimatedSection delay={0.25}>
+        <div className="mt-8 text-center">
+          <a href="mailto:research@vizuara.com?subject=Bootcamp Enrollment Inquiry"
+            className="inline-flex items-center gap-2 bg-accent text-white dark:text-bg px-6 py-3 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors cursor-pointer">
+            <FaEnvelope className="w-3.5 h-3.5" /> Contact Us for Enrollment
+          </a>
+        </div>
+      </AnimatedSection>
     </section>
   );
 }

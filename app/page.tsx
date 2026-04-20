@@ -1,5 +1,5 @@
-// app/page.tsx
-import OverviewSection from './components/OverviewSection';
+import LandingPage from "./components/LandingPage";
+
 export default function Page() {
-  return <OverviewSection />;
+  return <LandingPage />;
 }

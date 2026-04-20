@@ -1,5 +1,10 @@
-// app/bootcamps/page.tsx
-import BootcampsSection from '../components/BootcampsSection';
+import BootcampsSection from "../components/BootcampsSection";
 export default function Page() {
-  return <BootcampsSection />;
+  return (
+    <main className="min-h-screen pt-20 pb-16">
+      <div className="mx-auto w-full max-w-7xl px-6">
+        <BootcampsSection />
+      </div>
+    </main>
+  );
 }

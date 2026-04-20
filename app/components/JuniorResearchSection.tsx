@@ -1,130 +1,71 @@
-import ResearchCard from './ResearchCard';
+"use client";
 
-interface SmallStatCardProps {
-  value: string;
-  label: string;
-}
+import AnimatedSection from "./AnimatedSection";
+import AnimatedCounter from "./AnimatedCounter";
+import { FaMicroscope, FaArrowRight } from "react-icons/fa6";
 
-function SmallStatCard({ value, label }: SmallStatCardProps) {
-  return (
-    <div className="rounded-lg bg-gray-50 border border-gray-300 p-6 text-center transition-shadow hover:shadow-md">
-      <div className="text-3xl font-normal text-gray-900 mb-1">{value}</div>
-      <div className="text-gray-700 font-light text-sm">{label}</div>
-    </div>
-  );
-}
+const researchProjects = [
+  { category: "Scientific ML", title: "Battery Degradation Prediction in EVs Using SciML", authors: "S. Murgai, H. Bhagwat, R.A. Dandekar et al.", paperLink: "https://arxiv.org/abs/2410.14347" },
+  { category: "Machine Learning", title: "Music Recommendation with Regional Tune Recognition", authors: "T. Bhimrajka, S. Goel, O. Lalla", paperLink: undefined },
+  { category: "Aerospace AI", title: "ML Models in Liquid Rocket Engine Control", authors: "M. Gandho", paperLink: "https://www.jsr.org/hs/index.php/path/article/view/7649" },
+  { category: "Computer Vision", title: "Rice Leaf Disease Detection with AI Models", authors: "A. Gupta, V. Singhal, D. Vaidya", paperLink: undefined },
+  { category: "Environmental AI", title: "Harmful Algal Bloom Modeling Using SciML", authors: "K. Rangwala", paperLink: undefined },
+];
 
 export default function JuniorResearchSection() {
-  const researchProjects = [
-    {
-      category: 'Scientific ML',
-      title:
-        'A Scientific Machine Learning Approach for Predicting and Forecasting Battery Degradation in Electric Vehicles',
-      authors:
-        'Sharv Murgai, Hrishikesh Bhagwat, Raj Abhijit Dandekar, Rajat Dandekar, Sreedath Panat',
-      publication: undefined,
-      paperLink: 'https://arxiv.org/abs/2410.14347',
-      imageUrl:
-        'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?w=600&h=400&fit=crop',
-    },
-    {
-      category: 'Machine Learning',
-      title:
-        'Enhancing Music Recommendation Systems with Regional Tune Recognition',
-      authors: 'Tilak Bhimrajka, Sanchita Goel, Omkar Nitin Lalla',
-      publication: 'Published in: Journal of Emerging Investigators (2024)',
-      paperLink: undefined,
-      imageUrl:
-        'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=600&h=400&fit=crop',
-    },
-    {
-      category: 'Aerospace AI',
-      title:
-        'A Systematic Review and Analysis of Machine Learning Models in Liquid Rocket Engine Control',
-      authors: 'Malhar Gandho',
-      publication: 'Published in: Journal of Student Research (2024)',
-      paperLink:
-        'https://www.jsr.org/hs/index.php/path/article/view/7649',
-      imageUrl:
-        'https://images.unsplash.com/photo-1614728894747-a83421e2b9c9?w=600&h=400&fit=crop',
-    },
-    {
-      category: 'Computer Vision',
-      title:
-        'Comparing Rice Leaf Disease Detection Accuracy of AI Models',
-      authors: 'Avani Gupta, Vidhi Singhal, Deepti Vaidya',
-      publication: 'Status: Under Review (2024)',
-      paperLink: undefined,
-      imageUrl:
-        'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=600&h=400&fit=crop',
-    },
-    {
-      category: 'Environmental AI',
-      title:
-        'Enhanced Modeling of Harmful Algal Bloom (HAB) Growth Using Scientific Machine Learning',
-      authors: 'Kaizar Rangwala',
-      publication: 'Published in: MIT URTC Conference Poster (2024)',
-      paperLink: undefined,
-      imageUrl:
-        'https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=600&h=400&fit=crop',
-    },
-  ];
-
-  const stats = [
-    { value: '10', label: 'Research Papers' },
-    { value: '15+', label: 'Active Projects' },
-    { value: '30+', label: 'Program Participants' },
-  ];
-
   return (
-    <section id="junior-research" className="mb-20 scroll-mt-20" aria-labelledby="jr-title">
-      {/* Header */}
-      <div className="mb-4">
-        <div className="inline-flex items-center gap-2 rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-700">
-          <span className="h-2 w-2 rounded-full bg-vblue" />
-          Student Research
-        </div>
-        <h2 id="jr-title" className="mt-3 text-3xl font-normal text-gray-900 tracking-tight">
+    <section id="junior-research" className="scroll-mt-20">
+      <AnimatedSection>
+        <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-fg-muted">
+          <span className="w-6 h-px bg-steel" /> Student Research
+        </span>
+        <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-fg tracking-tight">
           Junior Research
         </h2>
-        <p className="text-lg text-gray-600 mt-2 mb-6 leading-relaxed font-light">
-          Student research from our AI High School Program.
-        </p>
-      </div>
+        <p className="mt-3 text-fg-muted leading-relaxed mb-10">Student research from our AI High School Program.</p>
+      </AnimatedSection>
 
-      {/* Projects */}
-      <div className="grid md:grid-cols-2 gap-6 mb-10">
-        {researchProjects.map((project, index) => (
-          <ResearchCard
-            key={index}
-            category={project.category}
-            title={project.title}
-            authors={project.authors}
-            publication={project.publication}
-            paperLink={project.paperLink}
-            imageUrl={project.imageUrl}
-          />
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 mb-10">
+        {researchProjects.map((p, i) => (
+          <AnimatedSection key={i} delay={i * 0.05}>
+            <div className="rounded-xl border border-border bg-surface p-5 h-full flex flex-col">
+              <span className="inline-flex items-center text-[10px] font-semibold uppercase tracking-wider text-steel mb-2">
+                <FaMicroscope className="w-2.5 h-2.5 mr-1.5" />{p.category}
+              </span>
+              <h4 className="text-sm font-semibold text-fg leading-snug mb-2 grow">{p.title}</h4>
+              <p className="text-xs text-fg-muted mb-3">{p.authors}</p>
+              {p.paperLink && (
+                <a href={p.paperLink} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:text-accent-hover transition-colors">
+                  Read Paper <FaArrowRight className="w-2.5 h-2.5" />
+                </a>
+              )}
+            </div>
+          </AnimatedSection>
         ))}
       </div>
 
-      {/* Stats panel */}
-      <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-blue-50/30 to-transparent p-6 md:p-8 mb-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          {stats.map((stat, index) => (
-            <SmallStatCard key={index} value={stat.value} label={stat.label} />
+      <AnimatedSection>
+        <div className="flex items-center justify-center gap-10 sm:gap-16 py-8 rounded-xl bg-surface-alt/50 mb-8">
+          {[{ n: 10, l: "Research Papers" }, { n: 15, s: "+", l: "Active Projects" }, { n: 30, s: "+", l: "Participants" }].map((s) => (
+            <div key={s.l} className="text-center">
+              <div className="text-2xl font-bold text-fg">
+                <AnimatedCounter target={s.n} suffix={s.s || ""} />
+              </div>
+              <div className="text-xs text-fg-muted mt-0.5">{s.l}</div>
+            </div>
           ))}
         </div>
-      </div>
+      </AnimatedSection>
 
-      {/* CTA (anchor styled as button) */}
-      <a
-        href="https://ai-highschool-research.vizuara.ai/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="inline-flex w-full md:w-auto items-center justify-center px-8 py-3 rounded-md bg-vblue text-white font-normal hover:opacity-90 transition-colors shadow-md hover:shadow-lg"
-      >
-        Join Our Program →
-      </a>
+      <AnimatedSection>
+        <div className="text-center">
+          <a href="https://ai-highschool-research.vizuara.ai/" target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-accent text-white dark:text-bg px-6 py-3 rounded-lg text-sm font-medium hover:bg-accent-hover transition-colors cursor-pointer">
+            Join Our Program <FaArrowRight className="w-3 h-3" />
+          </a>
+        </div>
+      </AnimatedSection>
     </section>
   );
 }
