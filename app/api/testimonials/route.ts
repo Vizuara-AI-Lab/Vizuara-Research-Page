@@ -2,13 +2,23 @@ import { NextResponse } from "next/server";
 import { db } from "@/app/lib/firebaseAdmin";
 import { verifyAdminFromRequest } from "@/app/lib/adminGuard";
 
+export const revalidate = 21600;
+
+type TestimonialDoc = {
+  postUrl?: string;
+  author?: string;
+  context?: string;
+  published?: boolean;
+  createdAt?: { toDate?: () => Date };
+};
+
 export async function GET() {
   const snap = await db
     .collection("testimonials")
     .orderBy("createdAt", "desc")
     .get();
   const testimonials = snap.docs.map((d) => {
-    const data: any = d.data();
+    const data = d.data() as TestimonialDoc;
     return {
       id: d.id,
       postUrl: data.postUrl || "",
@@ -18,7 +28,14 @@ export async function GET() {
       createdAt: data.createdAt?.toDate?.()?.toISOString?.() || null,
     };
   });
-  return NextResponse.json({ testimonials });
+  return NextResponse.json(
+    { testimonials },
+    {
+      headers: {
+        "Cache-Control": "public, max-age=21600, s-maxage=21600, stale-while-revalidate=86400",
+      },
+    }
+  );
 }
 
 export async function POST(req: Request) {
