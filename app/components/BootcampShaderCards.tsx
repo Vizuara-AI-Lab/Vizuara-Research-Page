@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Warp } from "@paper-design/shaders-react";
 import {
   Brain, Atom, Network, Bot, GraduationCap, Eye,
   ArrowUpRight, Clock, Mail, Copy, Check, CalendarCheck,
@@ -82,68 +81,28 @@ const bootcamps: Bootcamp[] = [
   },
 ];
 
-// Shader configs tuned to the research theme (navy / teal / subtle warm accents)
-const getShaderConfig = (index: number) => {
-  const configs = [
-    {
-      // Deep violet research vibe
-      proportion: 0.35, softness: 0.9, distortion: 0.15, swirl: 0.7, swirlIterations: 10,
-      shape: "stripes" as const, shapeScale: 0.1,
-      colors: ["hsl(250, 60%, 20%)", "hsl(260, 70%, 45%)", "hsl(280, 60%, 55%)", "hsl(240, 80%, 60%)"],
-    },
-    {
-      // Teal / ocean
-      proportion: 0.4, softness: 1.0, distortion: 0.18, swirl: 0.8, swirlIterations: 12,
-      shape: "checks" as const, shapeScale: 0.12,
-      colors: ["hsl(195, 70%, 18%)", "hsl(190, 80%, 40%)", "hsl(180, 70%, 50%)", "hsl(200, 85%, 60%)"],
-    },
-    {
-      // Emerald forest
-      proportion: 0.35, softness: 0.95, distortion: 0.16, swirl: 0.75, swirlIterations: 10,
-      shape: "stripes" as const, shapeScale: 0.11,
-      colors: ["hsl(165, 60%, 18%)", "hsl(160, 70%, 35%)", "hsl(150, 65%, 50%)", "hsl(170, 75%, 60%)"],
-    },
-    {
-      // Electric indigo
-      proportion: 0.4, softness: 1.1, distortion: 0.2, swirl: 0.85, swirlIterations: 13,
-      shape: "checks" as const, shapeScale: 0.1,
-      colors: ["hsl(230, 70%, 20%)", "hsl(220, 75%, 45%)", "hsl(210, 80%, 55%)", "hsl(235, 85%, 65%)"],
-    },
-    {
-      // Warm amber / sunset
-      proportion: 0.42, softness: 1.0, distortion: 0.19, swirl: 0.75, swirlIterations: 10,
-      shape: "stripes" as const, shapeScale: 0.12,
-      colors: ["hsl(25, 65%, 25%)", "hsl(35, 80%, 50%)", "hsl(45, 90%, 60%)", "hsl(20, 75%, 55%)"],
-    },
-    {
-      // Crimson / rose
-      proportion: 0.38, softness: 0.95, distortion: 0.17, swirl: 0.8, swirlIterations: 11,
-      shape: "checks" as const, shapeScale: 0.11,
-      colors: ["hsl(345, 60%, 20%)", "hsl(350, 75%, 45%)", "hsl(340, 80%, 55%)", "hsl(355, 85%, 65%)"],
-    },
-  ];
-  return configs[index % configs.length];
-};
+const cardBackgrounds = [
+  "from-[#1f1b4d] via-[#5b21b6] to-[#2563eb]",
+  "from-[#073042] via-[#0891b2] to-[#14b8a6]",
+  "from-[#06362f] via-[#047857] to-[#22c55e]",
+  "from-[#0f245c] via-[#1d4ed8] to-[#38bdf8]",
+  "from-[#5a2608] via-[#d97706] to-[#facc15]",
+  "from-[#4a1024] via-[#be123c] to-[#f43f5e]",
+];
 
 export default function BootcampShaderCards() {
   const [enrollments, setEnrollments] = useState<Record<number, number>>({});
 
   useEffect(() => {
     async function fetchEnrollments() {
-      const results: Record<number, number> = {};
-      await Promise.all(
-        bootcamps.map(async (b, i) => {
-          if (!b.enrollmentUrl) return;
-          try {
-            const res = await fetch(b.enrollmentUrl);
-            const data = await res.json();
-            if (data.success && typeof data.count === "number") {
-              results[i] = data.count;
-            }
-          } catch {}
-        })
-      );
-      setEnrollments(results);
+      try {
+        const res = await fetch("/api/enrollments");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.counts && typeof data.counts === "object") {
+          setEnrollments(data.counts);
+        }
+      } catch {}
     }
     fetchEnrollments();
   }, []);
@@ -170,7 +129,6 @@ export default function BootcampShaderCards() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {bootcamps.map((bootcamp, index) => {
-            const shaderConfig = getShaderConfig(index);
             const isOpen = bootcamp.participants.toLowerCase().includes("open");
             const liveCount = enrollments[index];
             const displayParticipants = liveCount != null
@@ -184,22 +142,8 @@ export default function BootcampShaderCards() {
                 rel="noopener noreferrer"
                 className="group relative h-[22rem] block cursor-pointer transition-transform duration-300 hover:-translate-y-1"
               >
-                {/* Shader background */}
-                <div className="absolute inset-0 rounded-3xl overflow-hidden">
-                  <Warp
-                    style={{ height: "100%", width: "100%" }}
-                    proportion={shaderConfig.proportion}
-                    softness={shaderConfig.softness}
-                    distortion={shaderConfig.distortion}
-                    swirl={shaderConfig.swirl}
-                    swirlIterations={shaderConfig.swirlIterations}
-                    shape={shaderConfig.shape}
-                    shapeScale={shaderConfig.shapeScale}
-                    scale={1}
-                    rotation={0}
-                    speed={0.6}
-                    colors={shaderConfig.colors}
-                  />
+                <div className={`absolute inset-0 rounded-3xl overflow-hidden bg-gradient-to-br ${cardBackgrounds[index % cardBackgrounds.length]}`}>
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.22),transparent_30%),radial-gradient(circle_at_85%_15%,rgba(255,255,255,0.18),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.12),transparent_45%)]" />
                 </div>
 
                 {/* Overlay content */}
