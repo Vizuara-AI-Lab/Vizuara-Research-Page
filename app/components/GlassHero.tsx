@@ -19,6 +19,7 @@ type Venue = { name: string; logo?: string };
 const VENUES: Venue[] = [
   { name: "NeurIPS Workshop", logo: "/venues/neurips.png" },
   { name: "ICLR Workshop", logo: "/venues/iclr.png" },
+  { name: "ICML", logo: "/venues/icml.svg" },
   { name: "ICCV Workshop" },
   { name: "AAAI Workshop", logo: "/venues/aaai.png" },
   { name: "JuliaCon", logo: "/venues/juliacon.png" },
