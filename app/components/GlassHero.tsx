@@ -15,11 +15,22 @@ import { ArrowUpRightIcon } from "./ArrowUpRightIcon";
 /* ── Venues Marquee ──
    `logo` points to an image under /public/venues when we have a real
    logo asset; otherwise the venue is rendered as styled text.        */
-type Venue = { name: string; logo?: string };
+type Venue = {
+  name: string;
+  logo?: string;
+  logoClassName?: string;
+  showNameWithLogo?: boolean;
+};
 const VENUES: Venue[] = [
   { name: "NeurIPS Workshop", logo: "/venues/neurips.png" },
   { name: "ICLR Workshop", logo: "/venues/iclr.png" },
-  { name: "ICML", logo: "/venues/icml.svg" },
+  {
+    name: "ICML",
+    logo: "/venues/icml.svg",
+    logoClassName:
+      "drop-shadow-[0_1px_1px_rgba(0,0,0,0.7)] drop-shadow-[0_0_3px_rgba(0,0,0,0.35)]",
+    showNameWithLogo: true,
+  },
   { name: "ICCV Workshop" },
   { name: "AAAI Workshop", logo: "/venues/aaai.png" },
   { name: "JuliaCon", logo: "/venues/juliacon.png" },
@@ -222,11 +233,18 @@ export default function GlassHero() {
                   title={v.name}
                 >
                   {v.logo ? (
-                    <img
-                      src={v.logo}
-                      alt={v.name}
-                      className="h-9 w-auto max-w-[140px] object-contain dark:brightness-110"
-                    />
+                    <>
+                      <img
+                        src={v.logo}
+                        alt={v.name}
+                        className={`h-9 w-auto max-w-[140px] object-contain dark:brightness-110 ${v.logoClassName ?? ""}`}
+                      />
+                      {v.showNameWithLogo && (
+                        <span className="text-lg font-bold text-fg tracking-tight">
+                          {v.name}
+                        </span>
+                      )}
+                    </>
                   ) : (
                     <span className="text-lg font-bold text-fg tracking-tight">
                       {v.name}
