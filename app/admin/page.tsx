@@ -1043,6 +1043,7 @@ function PostCampaignsEditor({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [sessionPages, setSessionPages] = useState<Record<string, { loading: boolean; rows: { path: string; count: number }[] }>>({});
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -1376,6 +1377,32 @@ function PostCampaignsEditor({
     await navigator.clipboard.writeText(url);
     setCopiedId(post.id || null);
     window.setTimeout(() => setCopiedId(null), 1600);
+  }
+
+  async function fetchSessionPages(post: PostCampaign) {
+    if (!post.id || sessionPages[post.id]) return;
+    setSessionPages((prev) => ({ ...prev, [post.id!]: { loading: true, rows: [] } }));
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`/api/post-campaigns/${post.id}/sessions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const { sessions } = await res.json();
+      const counts: Record<string, number> = {};
+      for (const s of sessions) {
+        for (const p of (s.pages || [])) {
+          counts[p] = (counts[p] || 0) + 1;
+        }
+      }
+      const rows = Object.entries(counts)
+        .map(([path, count]) => ({ path, count }))
+        .sort((a, b) => b.count - a.count);
+      setSessionPages((prev) => ({ ...prev, [post.id!]: { loading: false, rows } }));
+    } catch {
+      setSessionPages((prev) => ({ ...prev, [post.id!]: { loading: false, rows: [] } }));
+    }
   }
 
   async function refreshCampaign(post: PostCampaign) {
@@ -1875,8 +1902,11 @@ function PostCampaignsEditor({
                       ? "border-amber-200 bg-amber-50 [&_.lbl]:text-amber-600 [&_.val]:text-amber-800"
                       : "border-red-200 bg-red-50 [&_.lbl]:text-red-500 [&_.val]:text-red-700";
                     return (
-                      <div className={`rounded border px-1.5 py-2 text-center ${cls}`}>
-                        <div className="lbl text-[9px] font-semibold uppercase tracking-wide">Bounce</div>
+                      <div
+                        title="Bounce = left in <15s or saw only 1 page. Lower is better."
+                        className={`rounded border px-1.5 py-2 text-center cursor-help ${cls}`}
+                      >
+                        <div className="lbl text-[9px] font-semibold uppercase tracking-wide">Bounce ⓘ</div>
                         <div className="val mt-1 text-base font-bold leading-none">{rate ?? "--"}</div>
                       </div>
                     );
@@ -1886,7 +1916,11 @@ function PostCampaignsEditor({
                 {/* More details toggle */}
                 <button
                   type="button"
-                  onClick={() => setDetailsId(detailsId === post.id ? null : post.id!)}
+                  onClick={() => {
+                    const next = detailsId === post.id ? null : post.id!;
+                    setDetailsId(next);
+                    if (next) fetchSessionPages(post);
+                  }}
                   className="flex w-fit items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
                 >
                   <span>{detailsId === post.id ? "▲" : "▼"}</span>
@@ -1895,7 +1929,8 @@ function PostCampaignsEditor({
 
                 {/* Expanded details panel */}
                 {detailsId === post.id && (
-                  <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs space-y-2">
+                  <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs space-y-2.5">
+                    {/* Key metrics */}
                     <div className="flex justify-between">
                       <span className="text-gray-500">Avg pages / visit</span>
                       <span className="font-semibold text-fg">{sessionAvgPages(post) ?? "--"}</span>
@@ -1917,6 +1952,38 @@ function PostCampaignsEditor({
                     <div className="flex justify-between gap-4">
                       <span className="text-gray-500 shrink-0">Destination</span>
                       <span className="font-semibold text-fg truncate">{post.destinationUrl || "/"}</span>
+                    </div>
+
+                    {/* Bounce explanation */}
+                    <div className="rounded bg-amber-50 border border-amber-200 px-2.5 py-2 text-amber-800 leading-relaxed">
+                      <span className="font-semibold">Bounce</span> = visitor left in &lt;15s or only saw 1 page.
+                      Low bounce means your post attracted genuinely curious readers.
+                    </div>
+
+                    {/* Pages visited breakdown */}
+                    <div className="pt-0.5">
+                      <div className="mb-1.5 font-semibold text-gray-600 uppercase tracking-wide text-[10px]">Pages visited by your audience</div>
+                      {sessionPages[post.id!]?.loading ? (
+                        <div className="text-gray-400 py-1">Loading…</div>
+                      ) : sessionPages[post.id!]?.rows?.length ? (
+                        <div className="space-y-1">
+                          {(() => {
+                            const max = sessionPages[post.id!].rows[0].count;
+                            return sessionPages[post.id!].rows.map(({ path, count }) => (
+                              <div key={path} className="flex items-center gap-2">
+                                <div
+                                  className="h-1.5 rounded-full bg-blue-400 shrink-0"
+                                  style={{ width: `${Math.round((count / max) * 80)}px`, minWidth: "4px" }}
+                                />
+                                <span className="font-mono text-gray-700 truncate flex-1">{path}</span>
+                                <span className="font-semibold text-gray-600 shrink-0">{count}×</span>
+                              </div>
+                            ));
+                          })()}
+                        </div>
+                      ) : (
+                        <div className="text-gray-400">No page data yet</div>
+                      )}
                     </div>
                   </div>
                 )}
