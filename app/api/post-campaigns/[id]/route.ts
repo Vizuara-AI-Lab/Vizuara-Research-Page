@@ -39,9 +39,34 @@ const toStringList = (value: unknown) =>
     ? value.map(String).map((item) => item.trim()).filter(Boolean)
     : [];
 
+const TRACKING_ORIGIN = 'https://research.vizuara.ai';
+
+const replaceTrackingDomain = (caption: string, slug: string) =>
+  caption.replace(
+    /https?:\/\/research\.vizuara\.ai\/?\S*|research\.vizuara\.ai\/?\S*/gi,
+    `${TRACKING_ORIGIN}/r/${slug}`
+  );
+
 async function slugIsTaken(slug: string, currentId: string) {
   const snap = await db.collection('postCampaigns').where('slug', '==', slug).limit(1).get();
   return snap.docs.some((doc) => doc.id !== currentId);
+}
+
+export async function GET(
+  req: Request,
+  ctx: { params: Promise<{ id: string }> }
+) {
+  const admin = await verifyAdminFromRequest(req);
+  if (!admin) return json({ error: 'Unauthorized' }, 401);
+
+  const { id: rawId } = await ctx.params;
+  const id = (rawId || '').trim();
+  if (!id) return json({ error: 'Invalid id' }, 400);
+
+  const snap = await db.collection('postCampaigns').doc(id).get();
+  if (!snap.exists) return json({ error: 'Not found' }, 404);
+
+  return json({ id: snap.id, ...snap.data() });
 }
 
 export async function PATCH(
@@ -91,6 +116,17 @@ export async function PATCH(
     if (!nextSlug) return json({ error: 'Slug is invalid' }, 400);
     if (await slugIsTaken(nextSlug, id)) return json({ error: 'Slug already exists' }, 409);
     updates.slug = nextSlug;
+  }
+
+  const effectiveSlug =
+    typeof updates.slug === 'string'
+      ? updates.slug
+      : typeof body.currentSlug === 'string'
+      ? body.currentSlug
+      : undefined;
+
+  if (typeof updates.caption === 'string' && effectiveSlug) {
+    updates.caption = replaceTrackingDomain(updates.caption, effectiveSlug);
   }
 
   if (updates.caption === '') return json({ error: 'Caption is required' }, 400);

@@ -52,6 +52,14 @@ const toStringList = (value: unknown) =>
     ? value.map(String).map((item) => item.trim()).filter(Boolean)
     : [];
 
+const TRACKING_ORIGIN = 'https://research.vizuara.ai';
+
+const replaceTrackingDomain = (caption: string, slug: string) =>
+  caption.replace(
+    /https?:\/\/research\.vizuara\.ai\/?\S*|research\.vizuara\.ai\/?\S*/gi,
+    `${TRACKING_ORIGIN}/r/${slug}`
+  );
+
 export async function GET(req: Request) {
   const admin = await verifyAdminFromRequest(req);
   if (!admin) return json({ error: 'Unauthorized' }, 401);
@@ -80,12 +88,13 @@ export async function POST(req: Request) {
   if (!primaryImageUrl) return json({ error: 'Image is required' }, 400);
 
   const now = new Date();
+  const slug = await uniqueSlug(typeof body.slug === 'string' && body.slug.trim() ? body.slug : title);
   const data = {
     title,
-    caption,
+    caption: replaceTrackingDomain(caption, slug),
     platform: typeof body.platform === 'string' ? body.platform.trim() : '',
     destinationUrl: cleanDestination(body.destinationUrl),
-    slug: await uniqueSlug(typeof body.slug === 'string' && body.slug.trim() ? body.slug : title),
+    slug,
     imageUrl: primaryImageUrl,
     imagePath: imagePaths[0] || imagePath,
     imageUrls: imageUrls.length ? imageUrls : [primaryImageUrl],

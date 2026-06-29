@@ -32,6 +32,14 @@ export async function GET(
   const data = doc.data();
   const destination = toRedirectUrl(data.destinationUrl, req);
 
+  // Append campaign param for session tracking — same-origin only so external URLs stay clean
+  try {
+    const reqOrigin = new URL(req.url).origin;
+    if (destination.origin === reqOrigin) {
+      destination.searchParams.set('_c', slug);
+    }
+  } catch {}
+
   try {
     const ref = doc.ref;
     const headers = req.headers;

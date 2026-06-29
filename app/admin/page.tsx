@@ -10,6 +10,8 @@ import {
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
+import { FaLinkedin, FaYoutube } from "react-icons/fa6";
+import { FaXTwitter } from "react-icons/fa6";
 
 type Pub = {
   id?: string;
@@ -56,6 +58,14 @@ const slugify = (s: string) =>
     .replace(/[^\w\s-]/g, "")
     .replace(/\s+/g, "-")
     .slice(0, 60);
+
+const TRACKING_ORIGIN = "https://research.vizuara.ai";
+
+const replaceTrackingDomain = (caption: string, trackingUrl: string) =>
+  caption.replace(
+    /https?:\/\/research\.vizuara\.ai\/?\S*|research\.vizuara\.ai\/?\S*/gi,
+    trackingUrl
+  );
 
 const campaignImages = (post: PostCampaign) => {
   const urls = Array.isArray(post.imageUrls) ? post.imageUrls.filter(Boolean) : [];
@@ -170,6 +180,28 @@ type PostCampaign = {
   imagePaths?: string[];
   clickCount?: number;
   published?: boolean;
+  // session engagement analytics
+  sessionCount?: number;
+  totalSessionDuration?: number;
+  totalPagesVisited?: number;
+  bounceCount?: number;
+};
+
+const fmtDuration = (sec: number) => {
+  if (sec < 60) return `${sec}s`;
+  return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+};
+const sessionAvgDuration = (p: PostCampaign) => {
+  const n = p.sessionCount || 0;
+  return n ? fmtDuration(Math.round((p.totalSessionDuration || 0) / n)) : null;
+};
+const sessionAvgPages = (p: PostCampaign) => {
+  const n = p.sessionCount || 0;
+  return n ? ((p.totalPagesVisited || 0) / n).toFixed(1) : null;
+};
+const sessionBounceRate = (p: PostCampaign) => {
+  const n = p.sessionCount || 0;
+  return n ? Math.round(((p.bounceCount || 0) / n) * 100) + '%' : null;
 };
 
 function AdminShell({
@@ -1010,11 +1042,13 @@ function PostCampaignsEditor({
   const [search, setSearch] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [detailsId, setDetailsId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
   const [pendingPreviews, setPendingPreviews] = useState<
     { url: string; name: string }[]
   >([]);
@@ -1033,12 +1067,43 @@ function PostCampaignsEditor({
   });
 
   const trackingUrl = (post: PostCampaign) => {
-    const origin =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : "https://research.vizuara.ai";
-    return `${origin}/r/${post.slug || ""}`;
+    return `${TRACKING_ORIGIN}/r/${post.slug || ""}`;
   };
+
+  const previewSlug =
+    slugify(form.slug || form.title || form.caption || "your-post") ||
+    "your-post";
+  const previewTrackingUrl = `${TRACKING_ORIGIN}/r/${previewSlug}`;
+  const previewCaption = replaceTrackingDomain(
+    form.caption,
+    previewTrackingUrl
+  );
+  const showSocialPreview = form.caption.trim().length > 0;
+  const previewImages = [
+    ...campaignImages(form),
+    ...pendingPreviews.map((preview) => preview.url),
+  ];
+  function renderPreviewCaption(text = previewCaption, className = "") {
+    const parts = text.split(previewTrackingUrl);
+    return (
+      <p className={`whitespace-pre-wrap text-sm leading-6 text-fg ${className}`}>
+        {parts.map((part, index) => (
+          <span key={`${part}-${index}`}>
+            {part}
+            {index < parts.length - 1 && (
+              <span className="font-medium text-accent">
+                {previewTrackingUrl}
+              </span>
+            )}
+          </span>
+        ))}
+      </p>
+    );
+  }
+
+  function dummyPost(platform: string) {
+    alert(`${platform} posting is a preview-only button for now.`);
+  }
 
   async function load() {
     const token = await getToken();
@@ -1068,6 +1133,29 @@ function PostCampaignsEditor({
         .includes(q)
     );
   }, [items, search]);
+
+  const totalClicks = useMemo(
+    () => items.reduce((sum, item) => sum + (item.clickCount || 0), 0),
+    [items]
+  );
+  const activeCampaigns = useMemo(
+    () => items.filter((item) => item.published !== false).length,
+    [items]
+  );
+  const topCampaign = useMemo(
+    () =>
+      items.reduce<PostCampaign | null>(
+        (best, item) =>
+          !best || (item.clickCount || 0) > (best.clickCount || 0)
+            ? item
+            : best,
+        null
+      ),
+    [items]
+  );
+  const averageClicks = items.length
+    ? Math.round(totalClicks / items.length)
+    : 0;
 
   function reset() {
     setEditingId(null);
@@ -1222,10 +1310,14 @@ function PostCampaignsEditor({
         },
         body: JSON.stringify({
           title: form.title.trim(),
-          caption: form.caption.trim(),
+          caption: replaceTrackingDomain(
+            form.caption.trim(),
+            previewTrackingUrl
+          ),
           platform: (form.platform || "").trim(),
           destinationUrl: (form.destinationUrl || "/").trim(),
           slug: (form.slug || "").trim(),
+          currentSlug: previewSlug,
           imageUrl: campaignImages(form)[0],
           imagePath: campaignImagePaths(form)[0] || "",
           imageUrls: campaignImages(form),
@@ -1235,8 +1327,15 @@ function PostCampaignsEditor({
       });
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || "Save failed");
+      const saved = j as PostCampaign;
+      setItems((current) =>
+        editingId
+          ? current.map((item) =>
+              item.id === editingId ? { ...item, ...saved, id: editingId } : item
+            )
+          : [{ ...saved, id: saved.id }, ...current]
+      );
       reset();
-      await load();
     } catch (err: any) {
       alert(err?.message || "Save failed");
     } finally {
@@ -1264,7 +1363,7 @@ function PostCampaignsEditor({
         })
       );
       if (editingId === post.id) reset();
-      await load();
+      setItems((current) => current.filter((item) => item.id !== post.id));
     } catch (err: any) {
       alert(err?.message || "Delete failed");
     } finally {
@@ -1279,15 +1378,38 @@ function PostCampaignsEditor({
     window.setTimeout(() => setCopiedId(null), 1600);
   }
 
+  async function refreshCampaign(post: PostCampaign) {
+    if (!post.id) return;
+    setRefreshingId(post.id);
+    try {
+      const token = await getToken();
+      if (!token) return alert("Please sign in with an admin account.");
+      const res = await fetch(`/api/post-campaigns/${post.id}`, {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || "Refresh failed");
+      setItems((current) =>
+        current.map((item) => (item.id === post.id ? (j as PostCampaign) : item))
+      );
+    } catch (err: any) {
+      alert(err?.message || "Refresh failed");
+    } finally {
+      setRefreshingId(null);
+    }
+  }
+
   return (
     <div id="post-campaign-editor" className="space-y-6 mt-6 scroll-mt-20">
-      <div className="rounded-md border border-gray-200 p-4">
+      <div className="rounded-md border border-blue-200 bg-blue-50/45 p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-normal">
             {editingId ? "Edit post campaign" : "Add post campaign"}
           </h2>
           {editingId && (
             <button
+              type="button"
               onClick={reset}
               className="rounded border border-blue-200 bg-white px-3 py-1 text-sm hover:bg-blue-50"
             >
@@ -1298,7 +1420,7 @@ function PostCampaignsEditor({
 
         <div className="grid gap-3 md:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-gray-600">Internal title</span>
+            <span className="text-xs font-semibold text-fg">Internal title</span>
             <input
               className="border border-blue-200 bg-white px-3 py-2 w-full text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
               placeholder="Optional, generated from caption if empty"
@@ -1310,7 +1432,7 @@ function PostCampaignsEditor({
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-gray-600">Platform</span>
+            <span className="text-xs font-semibold text-fg">Platform</span>
             <input
               className="border border-blue-200 bg-white px-3 py-2 w-full text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
               placeholder="LinkedIn, X, Email..."
@@ -1322,7 +1444,7 @@ function PostCampaignsEditor({
           </label>
 
           <label className="flex flex-col gap-1 text-sm md:col-span-2">
-            <span className="text-xs text-gray-600">Post caption / script *</span>
+            <span className="text-sm font-bold text-fg">Post caption / script *</span>
             <textarea
               className="min-h-36 border border-blue-200 bg-white px-3 py-2 w-full text-sm leading-6 focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
               placeholder="Paste the full post content here."
@@ -1334,7 +1456,7 @@ function PostCampaignsEditor({
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-gray-600">Destination after click</span>
+            <span className="text-xs font-semibold text-fg">Destination after click</span>
             <input
               className="border border-blue-200 bg-white px-3 py-2 w-full text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
               placeholder="/ or /publications"
@@ -1346,7 +1468,7 @@ function PostCampaignsEditor({
           </label>
 
           <label className="flex flex-col gap-1 text-sm">
-            <span className="text-xs text-gray-600">Custom URL slug</span>
+            <span className="text-xs font-semibold text-fg">Custom URL slug</span>
             <input
               className="border border-blue-200 bg-white px-3 py-2 w-full text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
               placeholder="auto-generated if empty"
@@ -1358,7 +1480,7 @@ function PostCampaignsEditor({
           </label>
 
           <div className="flex flex-col gap-2 md:col-span-2">
-            <label className="text-xs text-gray-600">Post image(s) *</label>
+            <label className="text-xs font-semibold text-fg">Post image(s) *</label>
             {campaignImages(form).length || pendingPreviews.length ? (
               <div className="space-y-3">
                 <div className="flex flex-wrap gap-3">
@@ -1442,7 +1564,158 @@ function PostCampaignsEditor({
           </label>
         </div>
 
+        {showSocialPreview && (
+        <div className="mt-5 rounded-md border border-blue-200 bg-white p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-fg">Live social preview</h3>
+              <p className="mt-1 text-xs text-gray-600 break-all">
+                Tracking URL: {previewTrackingUrl}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => dummyPost("all platforms")}
+              className="rounded bg-accent px-3 py-2 text-sm text-white hover:bg-accent-hover"
+            >
+              Post on all platforms
+            </button>
+          </div>
+
+          <div className="grid gap-4 xl:grid-cols-3">
+            <div className="rounded-md border border-gray-200 bg-white">
+              <div className="border-b border-gray-100 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-fg">
+                  <FaLinkedin className="text-[#0A66C2]" />
+                  Community post
+                </div>
+                <div className="text-xs text-gray-500">LinkedIn-style preview</div>
+              </div>
+              <div className="space-y-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0A66C2] text-lg text-white">
+                    <FaLinkedin />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-fg">Vizuara Research</div>
+                    <div className="text-xs text-gray-500">Admin preview</div>
+                  </div>
+                </div>
+                {renderPreviewCaption()}
+                {previewImages.length > 0 && (
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {previewImages.slice(0, 4).map((image, index) => (
+                      <div
+                        key={`${image}-${index}`}
+                        className="flex aspect-square w-full items-center justify-center rounded border border-gray-200 bg-gray-50"
+                      >
+                        <img
+                          src={image}
+                          alt={`Community preview ${index + 1}`}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => dummyPost("community post")}
+                  className="rounded border border-blue-200 px-3 py-2 text-sm text-accent hover:bg-blue-50"
+                >
+                  Post community
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-200 bg-white">
+              <div className="border-b border-gray-100 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-fg">
+                  <FaXTwitter />
+                  Twitter / X
+                </div>
+                <div className="text-xs text-gray-500">Short-form preview</div>
+              </div>
+              <div className="space-y-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-lg text-white">
+                    <FaXTwitter />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-fg">Vizuara Research</div>
+                    <div className="text-xs text-gray-500">@vizuara</div>
+                  </div>
+                </div>
+                {renderPreviewCaption()}
+                {previewImages[0] && (
+                  <div className="flex aspect-[1.9] w-full items-center justify-center rounded-md border border-gray-200 bg-gray-50">
+                    <img
+                      src={previewImages[0]}
+                      alt="Twitter preview"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => dummyPost("Twitter / X")}
+                  className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+                >
+                  Post on X
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-md border border-gray-200 bg-white">
+              <div className="border-b border-gray-100 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-fg">
+                  <FaYoutube className="text-[#FF0000]" />
+                  YouTube
+                </div>
+                <div className="text-xs text-gray-500">Community post preview</div>
+              </div>
+              <div className="space-y-3 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FF0000] text-lg text-white">
+                    <FaYoutube />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-fg">Vizuara</div>
+                    <div className="text-xs text-gray-500">Community</div>
+                  </div>
+                </div>
+                {renderPreviewCaption()}
+                {previewImages.length > 0 && (
+                  <div className="grid grid-cols-2 gap-1 overflow-hidden rounded-md border border-gray-200">
+                    {previewImages.slice(0, 4).map((image, index) => (
+                      <div
+                        key={`${image}-${index}`}
+                        className="flex aspect-video w-full items-center justify-center bg-gray-50"
+                      >
+                        <img
+                          src={image}
+                          alt={`YouTube preview ${index + 1}`}
+                          className="max-h-full max-w-full object-contain"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => dummyPost("YouTube community")}
+                  className="rounded border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+                >
+                  Post on YouTube
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        )}
+
         <button
+          type="button"
           disabled={saving || uploading}
           onClick={save}
           className="mt-4 w-full sm:w-auto rounded bg-accent px-4 py-2 text-white hover:bg-accent-hover disabled:bg-blue-200 disabled:text-blue-700"
@@ -1461,7 +1734,7 @@ function PostCampaignsEditor({
         <div>
           <h2 className="text-lg font-normal">All post campaigns</h2>
           <p className="text-sm text-gray-600">
-            Use the generated URL in your post. Clicks update when visitors open it.
+            Use the generated URL in your post. Clicks update live when visitors open it.
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
@@ -1472,11 +1745,44 @@ function PostCampaignsEditor({
             onChange={(e) => setSearch(e.target.value)}
           />
           <button
+            type="button"
             onClick={load}
             className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
           >
             Refresh counts
           </button>
+        </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-md border border-blue-200 bg-blue-50 p-4">
+          <div className="text-xs font-semibold uppercase tracking-normal text-blue-700">
+            Total clicks
+          </div>
+          <div className="mt-2 text-2xl font-bold text-accent">{totalClicks}</div>
+        </div>
+        <div className="rounded-md border border-gray-200 bg-white p-4">
+          <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
+            Active campaigns
+          </div>
+          <div className="mt-2 text-2xl font-bold text-fg">{activeCampaigns}</div>
+        </div>
+        <div className="rounded-md border border-gray-200 bg-white p-4">
+          <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
+            Avg clicks / post
+          </div>
+          <div className="mt-2 text-2xl font-bold text-fg">{averageClicks}</div>
+        </div>
+        <div className="rounded-md border border-gray-200 bg-white p-4">
+          <div className="text-xs font-semibold uppercase tracking-normal text-gray-500">
+            Top post
+          </div>
+          <div className="mt-2 truncate text-sm font-semibold text-fg">
+            {topCampaign?.title || "No clicks yet"}
+          </div>
+          <div className="mt-1 text-xs text-gray-500">
+            {topCampaign ? `${topCampaign.clickCount || 0} clicks` : ""}
+          </div>
         </div>
       </div>
 
@@ -1512,7 +1818,7 @@ function PostCampaignsEditor({
                       </div>
                     )}
                     {images.length > 1 && (
-                      <div className="absolute right-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">
+                      <div className="absolute left-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">
                         {images.length} images
                       </div>
                     )}
@@ -1522,33 +1828,106 @@ function PostCampaignsEditor({
                     No image
                   </div>
                 )}
+                {/* Refresh button — always on top-right of image */}
+                <button
+                  type="button"
+                  disabled={refreshingId === post.id}
+                  onClick={() => refreshCampaign(post)}
+                  title="Refresh stats"
+                  className="absolute right-2 top-2 flex items-center gap-1 rounded bg-black/60 px-2 py-1 text-xs text-white backdrop-blur-sm hover:bg-black/80 disabled:opacity-50 transition-opacity"
+                >
+                  <span className={refreshingId === post.id ? "animate-spin inline-block" : ""}>↻</span>
+                  <span>{refreshingId === post.id ? "Loading..." : "Refresh"}</span>
+                </button>
               </div>
 
               <div className="flex flex-1 flex-col gap-3 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="font-medium text-fg">{post.title}</h3>
-                    <p className="mt-1 text-xs text-gray-500">
-                      {post.platform || "No platform"} · {post.published === false ? "Inactive" : "Active"}
-                    </p>
-                  </div>
-                  <div className="shrink-0 rounded border border-gray-200 px-2 py-1 text-right">
-                    <div className="text-lg font-semibold leading-none text-fg">
-                      {post.clickCount || 0}
-                    </div>
-                    <div className="mt-1 text-[11px] text-gray-500">clicks</div>
-                  </div>
+                {/* Title */}
+                <div>
+                  <h3 className="font-medium text-fg">{post.title}</h3>
+                  <p className="mt-0.5 text-xs text-gray-500">
+                    {post.platform || "No platform"} · {post.published === false ? "Inactive" : "Active"}
+                  </p>
                 </div>
 
-                <p
-                  className={`text-sm leading-6 text-gray-700 ${
-                    isExpanded ? "" : "line-clamp-4"
-                  }`}
+                {/* Always-visible stat badges */}
+                <div className="grid grid-cols-4 gap-1.5">
+                  <div className="rounded border border-blue-200 bg-blue-50 px-1.5 py-2 text-center">
+                    <div className="text-[9px] font-semibold uppercase tracking-wide text-blue-600">Clicks</div>
+                    <div className="mt-1 text-base font-bold leading-none text-blue-800">{post.clickCount || 0}</div>
+                  </div>
+                  <div className="rounded border border-gray-200 bg-gray-50 px-1.5 py-2 text-center">
+                    <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">Sessions</div>
+                    <div className="mt-1 text-base font-bold leading-none text-fg">{post.sessionCount ?? "--"}</div>
+                  </div>
+                  <div className="rounded border border-gray-200 bg-gray-50 px-1.5 py-2 text-center">
+                    <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-500">Avg time</div>
+                    <div className="mt-1 text-base font-bold leading-none text-fg">{sessionAvgDuration(post) ?? "--"}</div>
+                  </div>
+                  {(() => {
+                    const rate = sessionBounceRate(post);
+                    const raw = post.sessionCount ? Math.round(((post.bounceCount || 0) / post.sessionCount) * 100) : null;
+                    const cls = raw === null
+                      ? "border-gray-200 bg-gray-50 [&_.lbl]:text-gray-500 [&_.val]:text-fg"
+                      : raw < 30
+                      ? "border-green-200 bg-green-50 [&_.lbl]:text-green-600 [&_.val]:text-green-800"
+                      : raw < 60
+                      ? "border-amber-200 bg-amber-50 [&_.lbl]:text-amber-600 [&_.val]:text-amber-800"
+                      : "border-red-200 bg-red-50 [&_.lbl]:text-red-500 [&_.val]:text-red-700";
+                    return (
+                      <div className={`rounded border px-1.5 py-2 text-center ${cls}`}>
+                        <div className="lbl text-[9px] font-semibold uppercase tracking-wide">Bounce</div>
+                        <div className="val mt-1 text-base font-bold leading-none">{rate ?? "--"}</div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* More details toggle */}
+                <button
+                  type="button"
+                  onClick={() => setDetailsId(detailsId === post.id ? null : post.id!)}
+                  className="flex w-fit items-center gap-1 text-xs text-gray-400 hover:text-gray-600"
                 >
+                  <span>{detailsId === post.id ? "▲" : "▼"}</span>
+                  <span>{detailsId === post.id ? "Hide details" : "More details"}</span>
+                </button>
+
+                {/* Expanded details panel */}
+                {detailsId === post.id && (
+                  <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2.5 text-xs space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Avg pages / visit</span>
+                      <span className="font-semibold text-fg">{sessionAvgPages(post) ?? "--"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Click → session rate</span>
+                      <span className="font-semibold text-fg">
+                        {post.clickCount && post.sessionCount
+                          ? Math.round((post.sessionCount / post.clickCount) * 100) + "%"
+                          : "--"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Total time on site</span>
+                      <span className="font-semibold text-fg">
+                        {post.totalSessionDuration ? fmtDuration(post.totalSessionDuration) : "--"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-gray-500 shrink-0">Destination</span>
+                      <span className="font-semibold text-fg truncate">{post.destinationUrl || "/"}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Caption */}
+                <p className={`text-sm leading-6 text-gray-700 ${isExpanded ? "" : "line-clamp-3"}`}>
                   {post.caption}
                 </p>
                 {post.caption.length > 180 && (
                   <button
+                    type="button"
                     onClick={() => setExpandedId(isExpanded ? null : post.id!)}
                     className="w-fit text-sm text-vblue hover:underline"
                   >
@@ -1562,6 +1941,7 @@ function PostCampaignsEditor({
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <button
+                      type="button"
                       onClick={() => copyUrl(post)}
                       className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                     >
@@ -1576,12 +1956,14 @@ function PostCampaignsEditor({
                       Test
                     </a>
                     <button
+                      type="button"
                       onClick={() => startEdit(post)}
                       className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
                     >
                       Edit
                     </button>
                     <button
+                      type="button"
                       disabled={deletingId === post.id}
                       onClick={() => del(post)}
                       className="rounded border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"

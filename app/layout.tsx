@@ -1,5 +1,6 @@
 import "./globals.css";
 import TopNavbar from "./components/TopNavbar";
+import CampaignTracker from "./components/CampaignTracker";
 import { Figtree } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 
@@ -27,6 +28,7 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} storageKey="vizuara-theme">
           <TopNavbar />
+          <CampaignTracker />
           {children}
         </ThemeProvider>
       </body>
