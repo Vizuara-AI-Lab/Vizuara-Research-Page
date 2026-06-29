@@ -57,6 +57,16 @@ const slugify = (s: string) =>
     .replace(/\s+/g, "-")
     .slice(0, 60);
 
+const campaignImages = (post: PostCampaign) => {
+  const urls = Array.isArray(post.imageUrls) ? post.imageUrls.filter(Boolean) : [];
+  return urls.length ? urls : post.imageUrl ? [post.imageUrl] : [];
+};
+
+const campaignImagePaths = (post: PostCampaign) => {
+  const paths = Array.isArray(post.imagePaths) ? post.imagePaths.filter(Boolean) : [];
+  return paths.length ? paths : post.imagePath ? [post.imagePath] : [];
+};
+
 export default function AdminPage() {
   const [tagsInput, setTagsInput] = useState("");
 
@@ -122,6 +132,7 @@ type TabKey =
   | "publications"
   | "team"
   | "workshops"
+  | "postCampaigns"
   | "testimonials"
   | "quotes"
   | "faqs";
@@ -146,6 +157,21 @@ type FAQ = {
   answer: string;
 };
 
+type PostCampaign = {
+  id?: string;
+  title: string;
+  caption: string;
+  platform?: string;
+  destinationUrl: string;
+  slug?: string;
+  imageUrl?: string;
+  imagePath?: string;
+  imageUrls?: string[];
+  imagePaths?: string[];
+  clickCount?: number;
+  published?: boolean;
+};
+
 function AdminShell({
   userEmail,
   getToken,
@@ -162,6 +188,7 @@ function AdminShell({
     { key: "publications", label: "Publications" },
     { key: "team", label: "Team Members" },
     { key: "workshops", label: "Workshops" },
+    { key: "postCampaigns", label: "Post Campaigns" },
     { key: "testimonials", label: "Testimonials" },
     { key: "quotes", label: "Quotes" },
     { key: "faqs", label: "FAQs" },
@@ -237,6 +264,7 @@ function AdminShell({
           {tab === "publications" && <AdminPanel getToken={getToken} />}
           {tab === "team" && <TeamEditor getToken={getToken} />}
           {tab === "workshops" && <WorkshopsEditor getToken={getToken} />}
+          {tab === "postCampaigns" && <PostCampaignsEditor getToken={getToken} />}
           {tab === "testimonials" && <TestimonialsEditor getToken={getToken} />}
           {tab === "quotes" && <QuotesEditor getToken={getToken} />}
           {tab === "faqs" && <FAQsEditor getToken={getToken} />}
@@ -741,7 +769,7 @@ function AdminPanel({
   return (
     <div className="space-y-8 overflow-x-auto">
       {/* Editor */}
-      <div className="rounded-md border border-gray-200 p-4">
+      <div className="rounded-md border border-blue-200 bg-blue-50/45 p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-normal">
             {editingId ? "Edit publication" : "Add new publication"}
@@ -969,6 +997,610 @@ function AdminPanel({
   </table>
 </div>
 
+    </div>
+  );
+}
+
+function PostCampaignsEditor({
+  getToken,
+}: {
+  getToken: () => Promise<string | undefined>;
+}) {
+  const [items, setItems] = useState<PostCampaign[]>([]);
+  const [search, setSearch] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [pendingPreviews, setPendingPreviews] = useState<
+    { url: string; name: string }[]
+  >([]);
+
+  const [form, setForm] = useState<PostCampaign>({
+    title: "",
+    caption: "",
+    platform: "",
+    destinationUrl: "/",
+    slug: "",
+    imageUrl: "",
+    imagePath: "",
+    imageUrls: [],
+    imagePaths: [],
+    published: true,
+  });
+
+  const trackingUrl = (post: PostCampaign) => {
+    const origin =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "https://research.vizuara.ai";
+    return `${origin}/r/${post.slug || ""}`;
+  };
+
+  async function load() {
+    const token = await getToken();
+    if (!token) return;
+    const res = await fetch("/api/post-campaigns", {
+      cache: "no-store",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const j = await res.json().catch(() => ({ posts: [] }));
+    if (!res.ok) {
+      alert(j?.error || "Could not load post campaigns.");
+      return;
+    }
+    setItems(j.posts || []);
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return items;
+    return items.filter((p) =>
+      `${p.title} ${p.caption} ${p.platform || ""} ${p.slug || ""}`
+        .toLowerCase()
+        .includes(q)
+    );
+  }, [items, search]);
+
+  function reset() {
+    setEditingId(null);
+    pendingPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    setPendingPreviews([]);
+    setForm({
+      title: "",
+      caption: "",
+      platform: "",
+      destinationUrl: "/",
+      slug: "",
+      imageUrl: "",
+      imagePath: "",
+      imageUrls: [],
+      imagePaths: [],
+      published: true,
+    });
+  }
+
+  function startEdit(post: PostCampaign) {
+    setEditingId(post.id!);
+    setForm({
+      title: post.title || "",
+      caption: post.caption || "",
+      platform: post.platform || "",
+      destinationUrl: post.destinationUrl || "/",
+      slug: post.slug || "",
+      imageUrl: post.imageUrl || "",
+      imagePath: post.imagePath || "",
+      imageUrls: campaignImages(post),
+      imagePaths: campaignImagePaths(post),
+      published: post.published !== false,
+    });
+    document
+      .getElementById("post-campaign-editor")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    if (files.some((file) => !file.type.startsWith("image/"))) {
+      return alert("Select image files only");
+    }
+    const previews = files.map((file) => ({
+      url: URL.createObjectURL(file),
+      name: file.name,
+    }));
+    setPendingPreviews((current) => [...current, ...previews]);
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      const uploaded = await Promise.all(
+        files.map(
+          (file, index) =>
+            new Promise<{ url: string; path: string }>((resolve, reject) => {
+              const safeName = `${slugify(
+                form.title || "post"
+              )}-${Date.now()}-${index}-${file.name.replace(/\s+/g, "_")}`;
+              const path = `publication-images/post-campaign-${safeName}`;
+              const storageRef = ref(storage, path);
+              const task = uploadBytesResumable(storageRef, file);
+
+              task.on(
+                "state_changed",
+                (snap) =>
+                  setUploadProgress(
+                    Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
+                  ),
+                reject,
+                async () => {
+                  const url = await getDownloadURL(task.snapshot.ref);
+                  resolve({ url, path });
+                }
+              );
+            })
+        )
+      );
+
+      setForm((f) => {
+        const imageUrls = [
+          ...(f.imageUrls || []),
+          ...uploaded.map((item) => item.url),
+        ];
+        const imagePaths = [
+          ...(f.imagePaths || []),
+          ...uploaded.map((item) => item.path),
+        ];
+        return {
+          ...f,
+          imageUrls,
+          imagePaths,
+          imageUrl: imageUrls[0] || "",
+          imagePath: imagePaths[0] || "",
+        };
+      });
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      setPendingPreviews((current) =>
+        current.filter(
+          (preview) => !previews.some((item) => item.url === preview.url)
+        )
+      );
+      previews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    }
+
+    input.value = "";
+  }
+
+  async function removeImage(pathToRemove?: string) {
+    const path = pathToRemove || form.imagePath;
+    if (path) {
+      try {
+        await deleteObject(ref(storage, path));
+      } catch {}
+    }
+    setForm((f) => {
+      const imagePaths = (f.imagePaths || []).filter((item) => item !== path);
+      const imageUrls = (f.imageUrls || []).filter(
+        (_, index) => (f.imagePaths || [])[index] !== path
+      );
+      return {
+        ...f,
+        imageUrls,
+        imagePaths,
+        imageUrl: imageUrls[0] || "",
+        imagePath: imagePaths[0] || "",
+      };
+    });
+  }
+
+  async function save() {
+    if (!form.caption.trim()) return alert("Caption is required.");
+    if (!campaignImages(form).length) return alert("Post image is required.");
+    setSaving(true);
+    try {
+      const token = await getToken();
+      if (!token) return alert("Please sign in with an admin account.");
+      const method = editingId ? "PATCH" : "POST";
+      const url = editingId
+        ? `/api/post-campaigns/${editingId}`
+        : "/api/post-campaigns";
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          title: form.title.trim(),
+          caption: form.caption.trim(),
+          platform: (form.platform || "").trim(),
+          destinationUrl: (form.destinationUrl || "/").trim(),
+          slug: (form.slug || "").trim(),
+          imageUrl: campaignImages(form)[0],
+          imagePath: campaignImagePaths(form)[0] || "",
+          imageUrls: campaignImages(form),
+          imagePaths: campaignImagePaths(form),
+          published: form.published !== false,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || "Save failed");
+      reset();
+      await load();
+    } catch (err: any) {
+      alert(err?.message || "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function del(post: PostCampaign) {
+    if (!confirm("Delete this post campaign?")) return;
+    setDeletingId(post.id!);
+    try {
+      const token = await getToken();
+      if (!token) return alert("Please sign in with an admin account.");
+      const res = await fetch(`/api/post-campaigns/${post.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || "Delete failed");
+      await Promise.all(
+        campaignImagePaths(post).map(async (path) => {
+          try {
+            await deleteObject(ref(storage, path));
+          } catch {}
+        })
+      );
+      if (editingId === post.id) reset();
+      await load();
+    } catch (err: any) {
+      alert(err?.message || "Delete failed");
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function copyUrl(post: PostCampaign) {
+    const url = trackingUrl(post);
+    await navigator.clipboard.writeText(url);
+    setCopiedId(post.id || null);
+    window.setTimeout(() => setCopiedId(null), 1600);
+  }
+
+  return (
+    <div id="post-campaign-editor" className="space-y-6 mt-6 scroll-mt-20">
+      <div className="rounded-md border border-gray-200 p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-normal">
+            {editingId ? "Edit post campaign" : "Add post campaign"}
+          </h2>
+          {editingId && (
+            <button
+              onClick={reset}
+              className="rounded border border-blue-200 bg-white px-3 py-1 text-sm hover:bg-blue-50"
+            >
+              New
+            </button>
+          )}
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs text-gray-600">Internal title</span>
+            <input
+              className="border border-blue-200 bg-white px-3 py-2 w-full text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="Optional, generated from caption if empty"
+              value={form.title}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, title: e.target.value }))
+              }
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs text-gray-600">Platform</span>
+            <input
+              className="border border-blue-200 bg-white px-3 py-2 w-full text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="LinkedIn, X, Email..."
+              value={form.platform || ""}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, platform: e.target.value }))
+              }
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm md:col-span-2">
+            <span className="text-xs text-gray-600">Post caption / script *</span>
+            <textarea
+              className="min-h-36 border border-blue-200 bg-white px-3 py-2 w-full text-sm leading-6 focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="Paste the full post content here."
+              value={form.caption}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, caption: e.target.value }))
+              }
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs text-gray-600">Destination after click</span>
+            <input
+              className="border border-blue-200 bg-white px-3 py-2 w-full text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="/ or /publications"
+              value={form.destinationUrl}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, destinationUrl: e.target.value }))
+              }
+            />
+          </label>
+
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs text-gray-600">Custom URL slug</span>
+            <input
+              className="border border-blue-200 bg-white px-3 py-2 w-full text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-blue-100"
+              placeholder="auto-generated if empty"
+              value={form.slug || ""}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, slug: e.target.value }))
+              }
+            />
+          </label>
+
+          <div className="flex flex-col gap-2 md:col-span-2">
+            <label className="text-xs text-gray-600">Post image(s) *</label>
+            {campaignImages(form).length || pendingPreviews.length ? (
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-3">
+                  {campaignImages(form).map((url, index) => (
+                    <div key={`${url}-${index}`} className="relative">
+                      <img
+                        src={url}
+                        alt={`Post preview ${index + 1}`}
+                        className="h-24 w-24 object-cover rounded border border-blue-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(campaignImagePaths(form)[index])}
+                        className="absolute right-1 top-1 rounded bg-white/90 px-2 py-0.5 text-xs text-red-600 shadow"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  ))}
+                  {pendingPreviews.map((preview) => (
+                    <div key={preview.url} className="relative">
+                      <img
+                        src={preview.url}
+                        alt={preview.name}
+                        className="h-24 w-24 object-cover rounded border border-blue-200 opacity-75"
+                      />
+                      <span className="absolute inset-x-1 bottom-1 rounded bg-black/70 px-1 py-0.5 text-center text-[10px] text-white">
+                        Uploading
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                <label className="cursor-pointer rounded border border-blue-200 bg-white px-3 py-1 text-sm hover:bg-blue-50">
+                  Add images
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={pickFile}
+                  />
+                </label>
+                {uploading && (
+                  <span className="text-sm text-gray-600">
+                    {uploadProgress}%
+                  </span>
+                )}
+              </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="cursor-pointer rounded border border-blue-200 bg-white px-3 py-1 text-sm hover:bg-blue-50 w-fit">
+                  Upload image(s)
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={pickFile}
+                  />
+                </label>
+                {uploading && (
+                  <span className="text-sm text-gray-600">
+                    {uploadProgress}%
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.published !== false}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, published: e.target.checked }))
+              }
+            />
+            Active
+          </label>
+        </div>
+
+        <button
+          disabled={saving || uploading}
+          onClick={save}
+          className="mt-4 w-full sm:w-auto rounded bg-accent px-4 py-2 text-white hover:bg-accent-hover disabled:bg-blue-200 disabled:text-blue-700"
+        >
+          {uploading
+            ? "Uploading..."
+            : saving
+            ? "Saving..."
+            : editingId
+            ? "Update campaign"
+            : "Create campaign"}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-normal">All post campaigns</h2>
+          <p className="text-sm text-gray-600">
+            Use the generated URL in your post. Clicks update when visitors open it.
+          </p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <input
+            className="border border-gray-300 px-3 py-2 text-sm w-full sm:w-72"
+            placeholder="Search campaigns..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <button
+            onClick={load}
+            className="rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50"
+          >
+            Refresh counts
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((post) => {
+          const isExpanded = expandedId === post.id;
+          const url = trackingUrl(post);
+          const images = campaignImages(post);
+
+          return (
+            <article
+              key={post.id}
+              className="flex min-h-[430px] flex-col overflow-hidden rounded-md border border-gray-200 bg-white"
+            >
+              <div className="relative aspect-[1.35] w-full bg-gray-100">
+                {images.length ? (
+                  <>
+                    <img
+                      src={images[0]}
+                      alt={post.title}
+                      className="h-full w-full object-cover"
+                    />
+                    {images.length > 1 && (
+                      <div className="absolute inset-x-0 bottom-0 flex gap-1 overflow-x-auto bg-black/45 p-2">
+                        {images.map((image, index) => (
+                          <img
+                            key={`${image}-${index}`}
+                            src={image}
+                            alt={`${post.title} ${index + 1}`}
+                            className="h-10 w-10 shrink-0 rounded border border-white/60 object-cover"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    {images.length > 1 && (
+                      <div className="absolute right-2 top-2 rounded bg-black/70 px-2 py-1 text-xs text-white">
+                        {images.length} images
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-gray-500">
+                    No image
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-1 flex-col gap-3 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-medium text-fg">{post.title}</h3>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {post.platform || "No platform"} · {post.published === false ? "Inactive" : "Active"}
+                    </p>
+                  </div>
+                  <div className="shrink-0 rounded border border-gray-200 px-2 py-1 text-right">
+                    <div className="text-lg font-semibold leading-none text-fg">
+                      {post.clickCount || 0}
+                    </div>
+                    <div className="mt-1 text-[11px] text-gray-500">clicks</div>
+                  </div>
+                </div>
+
+                <p
+                  className={`text-sm leading-6 text-gray-700 ${
+                    isExpanded ? "" : "line-clamp-4"
+                  }`}
+                >
+                  {post.caption}
+                </p>
+                {post.caption.length > 180 && (
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : post.id!)}
+                    className="w-fit text-sm text-vblue hover:underline"
+                  >
+                    {isExpanded ? "View less" : "View more"}
+                  </button>
+                )}
+
+                <div className="mt-auto space-y-2">
+                  <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-700 break-all">
+                    {url}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => copyUrl(post)}
+                      className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                    >
+                      {copiedId === post.id ? "Copied" : "Copy URL"}
+                    </button>
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                    >
+                      Test
+                    </a>
+                    <button
+                      onClick={() => startEdit(post)}
+                      className="rounded border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      disabled={deletingId === post.id}
+                      onClick={() => del(post)}
+                      className="rounded border border-red-200 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {deletingId === post.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+
+        {!filtered.length && (
+          <div className="rounded-md border border-gray-200 p-6 text-sm text-gray-600 md:col-span-2 xl:col-span-3">
+            No post campaigns yet. Create one above to get a tracking URL.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
