@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import {
   Brain, Atom, Network, Bot, GraduationCap, Eye,
   ArrowUpRight, Clock, Mail, Copy, Check, CalendarCheck,
+  Waypoints, Layers3, MessagesSquare,
 } from "lucide-react";
 import AnimatedSection from "./AnimatedSection";
 
@@ -41,7 +42,7 @@ const bootcamps: Bootcamp[] = [
   },
   {
     title: "ML/DL Research Bootcamp",
-    level: "Intermediate to Advanced",
+    level: "Beginner to Intermediate",
     duration: "4 months",
     highlights: "Deep Learning Architectures, Research Papers, and Industry Applications.",
     participants: "30+ Participants",
@@ -79,6 +80,33 @@ const bootcamps: Bootcamp[] = [
     icon: <Eye className="w-10 h-10 text-white" strokeWidth={1.5} />,
     enrollmentUrl: "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20005408",
   },
+  {
+    title: "VLA Bootcamp",
+    level: "Intermediate",
+    duration: "4 months",
+    highlights: "Master Vision-Language-Action models and build AI brains for autonomous driving.",
+    participants: "Open for applications",
+    link: "https://vla.vizuara.ai/",
+    icon: <Waypoints className="w-10 h-10 text-white" strokeWidth={1.5} />,
+  },
+  {
+    title: "GPU Engineer's Bootcamp: 5D Parallelism",
+    level: "Beginner to Industrial-Grade",
+    duration: "4 months",
+    highlights: "Code GPT-2 from scratch and distribute training across 8 GPUs with 5D parallelism.",
+    participants: "Open for applications",
+    link: "https://5d-parallelism.vizuara.ai/",
+    icon: <Layers3 className="w-10 h-10 text-white" strokeWidth={1.5} />,
+  },
+  {
+    title: "AI Context Engineering Workshop",
+    level: "Professional",
+    duration: "4 months",
+    highlights: "Master context engineering for LLMs and build production-grade AI agents.",
+    participants: "Open for applications",
+    link: "https://context-engineering.vizuara.ai/",
+    icon: <MessagesSquare className="w-10 h-10 text-white" strokeWidth={1.5} />,
+  },
 ];
 
 const cardBackgrounds = [
@@ -88,6 +116,9 @@ const cardBackgrounds = [
   "from-[#0f245c] via-[#1d4ed8] to-[#38bdf8]",
   "from-[#5a2608] via-[#d97706] to-[#facc15]",
   "from-[#4a1024] via-[#be123c] to-[#f43f5e]",
+  "from-[#12372a] via-[#0f766e] to-[#34d399]",
+  "from-[#27272a] via-[#52525b] to-[#a3a3a3]",
+  "from-[#3f1d38] via-[#a21caf] to-[#fb7185]",
 ];
 
 export default function BootcampShaderCards() {

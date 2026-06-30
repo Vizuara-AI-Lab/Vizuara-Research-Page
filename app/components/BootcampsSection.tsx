@@ -5,15 +5,19 @@ import AnimatedCounter from "./AnimatedCounter";
 import {
   FaBrain, FaAtom, FaNetworkWired, FaRobot, FaGraduationCap, FaEye,
   FaClock, FaArrowRight, FaBookOpen, FaUsers, FaFileLines, FaEnvelope,
+  FaDiagramProject, FaLayerGroup, FaComments,
 } from "react-icons/fa6";
 
 const bootcamps = [
   { title: "Reinforcement Learning Research Bootcamp", level: "Intermediate to Advanced", duration: "7 weeks + 3 months research", highlights: "Comprehensive program to write high-quality research papers in Reinforcement Learning", participants: "Open for applications", link: "https://rlresearcherbootcamp.vizuara.ai/", icon: <FaBrain />, color: "#7C3AED" },
   { title: "Scientific Machine Learning Bootcamp", level: "Advanced", duration: "4 months", highlights: "PINNs, Scientific Computing, Publication Guidance", participants: "80+ Participants", link: "https://flyvidesh.online/ml-bootcamp/", icon: <FaAtom />, color: "#0891B2" },
-  { title: "ML/DL Research Bootcamp", level: "Intermediate to Advanced", duration: "4 months", highlights: "Deep Learning Architectures, Research Papers, Industry Applications", participants: "30+ Participants", link: "https://flyvidesh.online/ml-dl-bootcamp/", icon: <FaNetworkWired />, color: "#0118D8" },
+  { title: "ML/DL Research Bootcamp", level: "Beginner to Intermediate", duration: "4 months", highlights: "Deep Learning Architectures, Research Papers, Industry Applications", participants: "30+ Participants", link: "https://flyvidesh.online/ml-dl-bootcamp/", icon: <FaNetworkWired />, color: "#0118D8" },
   { title: "Gen AI Professional Bootcamp", level: "Professional", duration: "4 months", highlights: "Advanced Model Architectures, Research Methodologies, Novel Algorithm Development", participants: "40+ Participants", link: "https://flyvidesh.online/gen-ai-professional-bootcamp/", icon: <FaRobot />, color: "#2563EB" },
   { title: "AI High School Research Bootcamp", level: "Beginner to Intermediate", duration: "8 weeks", highlights: "Research Fundamentals, Mentorship, College Prep", participants: "25+ Participants", link: "https://ai-highschool-research.vizuara.ai/", icon: <FaGraduationCap />, color: "#D97706" },
   { title: "Computer Vision Research Bootcamp", level: "Beginner to Intermediate", duration: "4-Month Intensive Program", highlights: "Build strong foundations, work on impactful problems in CV, and publish at top-tier venues.", participants: "Open for applications", link: "https://cvresearchbootcamp.vizuara.ai/", icon: <FaEye />, color: "#DC2626" },
+  { title: "VLA Bootcamp", level: "Intermediate", duration: "4 months", highlights: "Master Vision-Language-Action models and build AI brains for autonomous driving.", participants: "Open for applications", link: "https://vla.vizuara.ai/", icon: <FaDiagramProject />, color: "#0F766E" },
+  { title: "GPU Engineer's Bootcamp: 5D Parallelism", level: "Beginner to Industrial-Grade", duration: "4 months", highlights: "Code GPT-2 from scratch and distribute training across 8 GPUs with 5D parallelism.", participants: "Open for applications", link: "https://5d-parallelism.vizuara.ai/", icon: <FaLayerGroup />, color: "#52525B" },
+  { title: "AI Context Engineering Workshop", level: "Professional", duration: "4 months", highlights: "Master context engineering for LLMs and build production-grade AI agents.", participants: "Open for applications", link: "https://context-engineering.vizuara.ai/", icon: <FaComments />, color: "#A21CAF" },
 ];
 
 export default function BootcampsSection() {
@@ -62,7 +66,7 @@ export default function BootcampsSection() {
       <AnimatedSection delay={0.2}>
         <div className="mt-12 flex items-center justify-center gap-10 sm:gap-16 py-8 rounded-xl bg-surface-alt/50">
           {[
-            { icon: <FaBookOpen />, n: 6, l: "Programs" },
+            { icon: <FaBookOpen />, n: 9, l: "Programs" },
             { icon: <FaUsers />, n: 120, s: "+", l: "Participants" },
             { icon: <FaFileLines />, n: 15, s: "+", l: "Publications" },
           ].map((s) => (
