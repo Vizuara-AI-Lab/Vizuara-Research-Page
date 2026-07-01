@@ -9,6 +9,9 @@ const enrollmentUrls = [
   "https://us-central1-videsh-a52fb.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20000236",
   "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20000408",
   "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20005408",
+  "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20006329",
+  "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20006042",
+  "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20006089",
 ];
 
 export async function GET() {

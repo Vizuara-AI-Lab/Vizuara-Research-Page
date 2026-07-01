@@ -88,6 +88,7 @@ const bootcamps: Bootcamp[] = [
     participants: "Open for applications",
     link: "https://vla.vizuara.ai/",
     icon: <Waypoints className="w-10 h-10 text-white" strokeWidth={1.5} />,
+    enrollmentUrl: "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20006329",
   },
   {
     title: "GPU Engineer's Bootcamp: 5D Parallelism",
@@ -97,6 +98,7 @@ const bootcamps: Bootcamp[] = [
     participants: "Open for applications",
     link: "https://5d-parallelism.vizuara.ai/",
     icon: <Layers3 className="w-10 h-10 text-white" strokeWidth={1.5} />,
+    enrollmentUrl: "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20006042",
   },
   {
     title: "AI Context Engineering Workshop",
@@ -106,6 +108,7 @@ const bootcamps: Bootcamp[] = [
     participants: "Open for applications",
     link: "https://context-engineering.vizuara.ai/",
     icon: <MessagesSquare className="w-10 h-10 text-white" strokeWidth={1.5} />,
+    enrollmentUrl: "https://us-central1-vizuara-ai-labs.cloudfunctions.net/getActiveEnrollmentCount?courseId=course_20006089",
   },
 ];
 
