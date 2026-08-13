@@ -19,6 +19,14 @@ type TeamMember = {
   scholarUrl?: string;
 };
 
+const AVATAR_COLORS = ["6B7280", "7C3AED", "0891B2", "059669", "D97706", "DC2626", "2563EB"];
+
+function initialsAvatarUrl(name: string) {
+  const initials = name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  const bgColor = AVATAR_COLORS[name.charCodeAt(0) % AVATAR_COLORS.length];
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(initials)}&background=${bgColor}&color=fff&size=240&rounded=true`;
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-fg-muted">
@@ -76,28 +84,28 @@ const FOUNDERS = [
 const RESEARCHERS = [
   {
     name: "Prathamesh Joshi",
-    photo: "https://media.licdn.com/dms/image/v2/D5603AQGh4Xubppy3nQ/profile-displayphoto-shrink_400_400/B56ZcGret3GoAs-/0/1748163756447?e=1778112000&v=beta&t=vFO5M9QHm0aqwZIY7rFCS9szxmsJv06qXGeXMwPN-GQ",
+    photo: "/team/prathamesh-joshi.jpg",
     role: "Lead Research Scientist, Vizuara",
     work: "NeurIPS Workshops, ICLR, JuliaCon, AAAI Workshops",
   },
   {
     name: "Mayank Pratap Singh",
-    photo: "https://media.licdn.com/dms/image/v2/D5603AQEuCepvo7Zg8Q/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1718224107918?e=1778112000&v=beta&t=PphHXFwJnngN_VE74k6uGuxrJH4ippn6p_HUugj-U8Q",
+    photo: "",
     role: "AI Researcher @Vizuara",
   },
   {
     name: "Vikash Chandra Mishra",
-    photo: "https://media.licdn.com/dms/image/v2/D4D03AQFn-QQJTucx0A/profile-displayphoto-shrink_200_200/B4DZUZxOsuG8AY-/0/1739894093468?e=1778112000&v=beta&t=lvQZsCJeq9Zw_DTVBMp_5-PxBT-c9nbSmststFzNHSU",
+    photo: "",
     role: "AI Researcher @Vizuara",
   },
   {
     name: "Naman Dwivedi",
-    photo: "https://media.licdn.com/dms/image/v2/D5603AQHxGRiKjlhgAg/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1722351538133?e=1778112000&v=beta&t=ABVuHhjboBOIASb9UFED98_GyZh5jJK5zwy63YtdyUc",
+    photo: "",
     role: "AI Researcher @Vizuara",
   },
   {
     name: "Mohammed Abraar",
-    photo: "https://media.licdn.com/dms/image/v2/D4D03AQHJVKmPeyf5ig/profile-displayphoto-shrink_400_400/B4DZXMBTeoHkAg-/0/1742884649496?e=1778112000&v=beta&t=jX2_XhocztFVox_Mq_8c1kewL-LXSkdSHUauDae0ZCI",
+    photo: "",
     role: "AI Researcher @Vizuara",
     work: "ICLR, EACL Workshops",
   },
@@ -222,10 +230,14 @@ export default function TeamSection() {
               className="rounded-2xl border border-border bg-surface p-5 text-center transition-all hover:shadow-md hover:border-teal/30 flex flex-col items-center"
             >
               <img
-                src={r.photo}
+                src={r.photo?.trim() ? r.photo : initialsAvatarUrl(r.name)}
                 alt={r.name}
                 referrerPolicy="no-referrer"
                 className="w-24 h-24 rounded-full object-cover border-2 border-border mb-3"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = initialsAvatarUrl(r.name);
+                }}
               />
               <h4 className="text-sm font-semibold text-fg leading-snug">{r.name}</h4>
               {r.role && (
