@@ -13,6 +13,16 @@ remotePatterns: [
 { protocol: 'https', hostname: 'ieeexplore.ieee.org' },
 { protocol: 'https', hostname: 'link.springer.com' }
 ]
+},
+async headers() {
+  return [
+    {
+      source: '/hero/:path*',
+      headers: [
+        { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+      ],
+    },
+  ];
 }
 };
 

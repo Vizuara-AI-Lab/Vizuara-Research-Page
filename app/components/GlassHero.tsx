@@ -59,10 +59,11 @@ export default function GlassHero() {
     <div
       className="relative w-full bg-no-repeat bg-cover bg-center text-fg overflow-hidden hero-section"
     >
+      <link rel="preload" as="image" href="/hero/grid-background.webp" fetchPriority="high" />
       <style>{`
         .hero-section {
           background-color: #ffffff;
-          background-image: url('https://raw.githubusercontent.com/prebuiltui/prebuiltui/main/assets/hero/gridBackground.png');
+          background-image: url('/hero/grid-background.webp');
           position: relative;
         }
         .hero-section::before {
