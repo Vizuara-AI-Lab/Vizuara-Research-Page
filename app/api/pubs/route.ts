@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/app/lib/firebaseAdmin';
 import { verifyAdminFromRequest } from '@/app/lib/adminGuard';
+import { resolvePublicationImageUrl } from '@/app/lib/pubImages';
 
 const toTags = (t: unknown): string[] => {
   if (Array.isArray(t)) return t.map(String).map(s => s.trim()).filter(Boolean);
@@ -12,7 +13,7 @@ export async function GET() {
   const snap = await db.collection('publications').orderBy('year', 'desc').get();
   const items = snap.docs.map(d => {
     const data: any = d.data();
-    return { ...data, id: d.id, tags: toTags(data.tags) }; // ensure id is last so it isn't overwritten
+    return { ...data, imageUrl: resolvePublicationImageUrl(data.imageUrl), id: d.id, tags: toTags(data.tags) }; // ensure id is last so it isn't overwritten
   });
   return NextResponse.json({ publications: items });
 }

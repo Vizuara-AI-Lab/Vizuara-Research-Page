@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/app/lib/firebaseAdmin';
 import { verifyAdminFromRequest } from '@/app/lib/adminGuard';
+import { resolvePublicationImageUrl } from '@/app/lib/pubImages';
 
 const json = (data: any, status = 200) => NextResponse.json(data, { status });
 
@@ -23,7 +24,7 @@ export async function GET(
   if (!doc.exists) return json({ error: 'Not found' }, 404);
 
   const data = doc.data() as any;
-  return json({ ...data, id: doc.id, tags: toTags(data.tags) });
+  return json({ ...data, imageUrl: resolvePublicationImageUrl(data.imageUrl), id: doc.id, tags: toTags(data.tags) });
 }
 
 // PATCH /api/pubs/[id]

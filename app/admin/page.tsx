@@ -3,13 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "./useAuth";
 import WorkshopsEditor from "./WorkshopsEditor";
-import { storage } from "@/app/lib/firebaseClient";
-import {
-  ref,
-  uploadBytesResumable,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
+import { uploadImage, deleteUploadedImage } from "@/app/lib/uploadImage";
 import { FaLinkedin, FaYoutube } from "react-icons/fa6";
 import { FaXTwitter } from "react-icons/fa6";
 
@@ -373,49 +367,34 @@ function TeamEditor({
   }
 
   async function pickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return alert("Select an image");
+    const token = await getToken();
+    if (!token) return alert("Please sign in with an admin account.");
+
     setUploading(true);
-
-    const safeName = `${slugify(
-      form.name || "team"
-    )}-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
-    const path = `team/${safeName}`;
-    const storageRef = ref(storage, path);
-    const task = uploadBytesResumable(storageRef, file);
-
-    task.on(
-      "state_changed",
-      (snap) =>
-        setUploadProgress(
-          Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
-        ),
-      () => {
-        alert("Upload failed");
-        setUploading(false);
-      },
-      async () => {
-        if (form.imagePath && form.imagePath !== path) {
-          try {
-            await deleteObject(ref(storage, form.imagePath));
-          } catch {}
-        }
-        const url = await getDownloadURL(task.snapshot.ref);
-        setForm((f) => ({ ...f, imageUrl: url, imagePath: path }));
-        setUploading(false);
-      }
-    );
-
-    e.currentTarget.value = "";
+    setUploadProgress(0);
+    try {
+      const uploaded = await uploadImage(file, {
+        token,
+        folder: "team",
+        name: `${slugify(form.name || "team")}-${file.name}`,
+        onProgress: setUploadProgress,
+      });
+      await deleteUploadedImage(form.imagePath, token);
+      setForm((f) => ({ ...f, imageUrl: uploaded.url, imagePath: uploaded.path }));
+    } catch (err: any) {
+      alert(err?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      input.value = "";
+    }
   }
 
   async function removeImage() {
-    if (form.imagePath) {
-      try {
-        await deleteObject(ref(storage, form.imagePath));
-      } catch {}
-    }
+    await deleteUploadedImage(form.imagePath, await getToken());
     setForm((f) => ({ ...f, imageUrl: "", imagePath: "" }));
   }
 
@@ -685,48 +664,34 @@ function AdminPanel({
   }
 
   async function handlePickFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) return alert("Select an image");
+    const token = await getToken();
+    if (!token) return alert("Please sign in with an admin account.");
 
     setUploading(true);
-    const safeName = `${slugify(
-      form.title || "file"
-    )}-${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
-    const path = `publication-images/${safeName}`;
-    const storageRef = ref(storage, path);
-    const task = uploadBytesResumable(storageRef, file);
-    task.on(
-      "state_changed",
-      (snap) =>
-        setUploadProgress(
-          Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
-        ),
-      () => {
-        alert("Upload failed");
-        setUploading(false);
-      },
-      async () => {
-        if (form.imagePath && form.imagePath !== path) {
-          try {
-            await deleteObject(ref(storage, form.imagePath));
-          } catch {}
-        }
-        const url = await getDownloadURL(task.snapshot.ref);
-        setForm((f) => ({ ...f, imageUrl: url, imagePath: path }));
-        setUploading(false);
-      }
-    );
-
-    e.currentTarget.value = "";
+    setUploadProgress(0);
+    try {
+      const uploaded = await uploadImage(file, {
+        token,
+        folder: "publications",
+        name: `${slugify(form.title || "file")}-${file.name}`,
+        onProgress: setUploadProgress,
+      });
+      await deleteUploadedImage(form.imagePath, token);
+      setForm((f) => ({ ...f, imageUrl: uploaded.url, imagePath: uploaded.path }));
+    } catch (err: any) {
+      alert(err?.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      input.value = "";
+    }
   }
 
   async function removeImage() {
-    if (form.imagePath) {
-      try {
-        await deleteObject(ref(storage, form.imagePath));
-      } catch {}
-    }
+    await deleteUploadedImage(form.imagePath, await getToken());
     setForm((f) => ({ ...f, imageUrl: "", imagePath: "" }));
   }
 
@@ -1211,30 +1176,16 @@ function PostCampaignsEditor({
     setUploadProgress(0);
 
     try {
+      const token = await getToken();
+      if (!token) throw new Error("Please sign in with an admin account.");
       const uploaded = await Promise.all(
-        files.map(
-          (file, index) =>
-            new Promise<{ url: string; path: string }>((resolve, reject) => {
-              const safeName = `${slugify(
-                form.title || "post"
-              )}-${Date.now()}-${index}-${file.name.replace(/\s+/g, "_")}`;
-              const path = `publication-images/post-campaign-${safeName}`;
-              const storageRef = ref(storage, path);
-              const task = uploadBytesResumable(storageRef, file);
-
-              task.on(
-                "state_changed",
-                (snap) =>
-                  setUploadProgress(
-                    Math.round((snap.bytesTransferred / snap.totalBytes) * 100)
-                  ),
-                reject,
-                async () => {
-                  const url = await getDownloadURL(task.snapshot.ref);
-                  resolve({ url, path });
-                }
-              );
-            })
+        files.map((file, index) =>
+          uploadImage(file, {
+            token,
+            folder: "post-campaigns",
+            name: `${slugify(form.title || "post")}-${index}-${file.name}`,
+            onProgress: setUploadProgress,
+          })
         )
       );
 
@@ -1272,11 +1223,7 @@ function PostCampaignsEditor({
 
   async function removeImage(pathToRemove?: string) {
     const path = pathToRemove || form.imagePath;
-    if (path) {
-      try {
-        await deleteObject(ref(storage, path));
-      } catch {}
-    }
+    if (path) await deleteUploadedImage(path, await getToken());
     setForm((f) => {
       const imagePaths = (f.imagePaths || []).filter((item) => item !== path);
       const imageUrls = (f.imageUrls || []).filter(
@@ -1357,11 +1304,7 @@ function PostCampaignsEditor({
       const j = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(j?.error || "Delete failed");
       await Promise.all(
-        campaignImagePaths(post).map(async (path) => {
-          try {
-            await deleteObject(ref(storage, path));
-          } catch {}
-        })
+        campaignImagePaths(post).map((path) => deleteUploadedImage(path, token))
       );
       if (editingId === post.id) reset();
       setItems((current) => current.filter((item) => item.id !== post.id));

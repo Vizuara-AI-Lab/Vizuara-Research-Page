@@ -23,6 +23,15 @@ export default function PublicationCard({ title, authors, venue, paperLink, imag
   const [thumb, setThumb] = useState<string | undefined>(() => proxify(imageUrl));
   const [asked, setAsked] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const failedOnce = useRef(false);
+
+  // If the stored image no longer loads, drop it once so the OG/figure lookup below can try instead.
+  const onThumbError = () => {
+    if (failedOnce.current) { setThumb(undefined); return; }
+    failedOnce.current = true;
+    setAsked(false);
+    setThumb(undefined);
+  };
 
   useEffect(() => {
     if (!paperLink || thumb) return;
@@ -58,6 +67,7 @@ export default function PublicationCard({ title, authors, venue, paperLink, imag
             className="max-w-full max-h-full object-contain transition-transform duration-500 ease-out group-hover:scale-[1.08] p-2"
             loading="lazy"
             referrerPolicy="no-referrer"
+            onError={onThumbError}
           />
         ) : (
           <FileText className="w-10 h-10 text-steel/30" />
