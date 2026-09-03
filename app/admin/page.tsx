@@ -116,7 +116,7 @@ export default function AdminPage() {
           </div>
         </div>
         <p>You are not authorized to access the admin panel.</p>
-        <a href="/" className="underline text-vblue">
+        <a href="/" className="underline text-accent">
           Go to home →
         </a>
       </div>
@@ -543,7 +543,7 @@ function TeamEditor({
         <button
           disabled={saving}
           onClick={save}
-          className="mt-4 w-full sm:w-auto bg-vblue text-white px-4 py-2 rounded"
+          className="mt-4 w-full sm:w-auto bg-accent hover:bg-accent-hover text-white px-4 py-2 rounded"
         >
           {saving ? "Saving…" : editingId ? "Update" : "Create"}
         </button>
@@ -577,7 +577,7 @@ function TeamEditor({
                 <td className="px-3 py-2 align-top">{m.title}</td>
                 <td className="px-3 py-2 align-top space-x-2">
                   <button
-                    className="text-vblue hover:underline"
+                    className="text-accent hover:underline"
                     onClick={() => startEdit(m)}
                   >
                     Edit
@@ -846,26 +846,48 @@ function AdminPanel({
                 <button
                   type="button"
                   onClick={removeImage}
-                  className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50"
+                  disabled={uploading}
+                  className="rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50 disabled:opacity-60"
                 >
                   Remove
                 </button>
                 {uploading && (
-                  <span className="text-sm text-gray-600">
-                    {uploadProgress}%
+                  <span className="text-sm font-medium text-accent">
+                    Uploading… {uploadProgress}%
                   </span>
                 )}
               </div>
             ) : (
-              <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 text-sm hover:bg-gray-50 w-fit">
-                Upload image
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handlePickFile}
-                />
-              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <label
+                  className={`inline-flex items-center gap-2 rounded px-3 py-1.5 text-sm font-medium text-white ${
+                    uploading
+                      ? "bg-accent/60 cursor-wait"
+                      : "bg-accent hover:bg-accent-hover cursor-pointer"
+                  }`}
+                >
+                  {uploading ? `Uploading… ${uploadProgress}%` : "Upload image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={handlePickFile}
+                  />
+                </label>
+                {uploading ? (
+                  <div className="h-2 w-40 overflow-hidden rounded bg-gray-200">
+                    <div
+                      className="h-full bg-accent transition-all"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500">
+                    PNG, JPG or WebP. Resized automatically.
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
@@ -894,7 +916,7 @@ function AdminPanel({
           <button
             onClick={save}
             disabled={saving || uploading}
-            className="w-full sm:w-auto rounded bg-vblue px-4 py-2 text-white hover:opacity-90 disabled:opacity-60"
+            className="w-full sm:w-auto rounded bg-accent hover:bg-accent-hover px-4 py-2 text-white hover:opacity-90 disabled:opacity-60"
           >
             {uploading
               ? "Uploading…"
@@ -968,7 +990,7 @@ function AdminPanel({
           </td>
           <td className="px-3 py-2 align-middle text-center whitespace-nowrap space-x-2">
             <button
-              className="text-vblue hover:underline"
+              className="text-accent hover:underline"
               onClick={() => startEdit(p)}
             >
               Edit
@@ -1939,7 +1961,7 @@ function PostCampaignsEditor({
                   <button
                     type="button"
                     onClick={() => setExpandedId(isExpanded ? null : post.id!)}
-                    className="w-fit text-sm text-vblue hover:underline"
+                    className="w-fit text-sm text-accent hover:underline"
                   >
                     {isExpanded ? "View less" : "View more"}
                   </button>
@@ -2102,7 +2124,7 @@ function TestimonialsEditor({
         <button
           disabled={saving}
           onClick={save}
-          className="mt-4 w-full sm:w-auto rounded bg-vblue px-4 py-2 text-white hover:opacity-90 disabled:opacity-60"
+          className="mt-4 w-full sm:w-auto rounded bg-accent hover:bg-accent-hover px-4 py-2 text-white hover:opacity-90 disabled:opacity-60"
         >
           {saving ? "Saving…" : "Create"}
         </button>
@@ -2132,7 +2154,7 @@ function TestimonialsEditor({
                     href={t.postUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-vblue hover:underline"
+                    className="text-accent hover:underline"
                   >
                     {t.postUrl}
                   </a>
