@@ -21,11 +21,12 @@ const ACCEPTANCES = [
   { workshop: "Transitioning from Pretraining to Post-Training", domain: "RL Post-Training" },
   { workshop: "AI for Stochastic Dynamics", domain: "PDEs · Scientific ML" },
   { workshop: "SLMs for Agentic Systems", domain: "Small Language Models" },
+  { workshop: "VeriCodeGen: AI for Verifiable Coding", domain: "Computer Vision" },
   { workshop: "New in ML", domain: "Physics-Informed ML" },
 ];
 
 const SUMMARY =
-  "Spanning reinforcement learning, AI agents, Scientific ML, physics-informed AI with simulations, and small language models.";
+  "Spanning reinforcement learning, AI agents, Scientific ML, physics-informed AI with simulations, small language models, and computer vision.";
 
 /* ─── Shared bits ─── */
 
@@ -143,7 +144,7 @@ function CoverCard({ onClose }: { onClose: () => void }) {
           <div className="mt-8 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/60">Announcement</div>
         </div>
         <div className="relative my-8 sm:my-0">
-          <div className={`${fraunces.className} text-[120px] sm:text-[160px] leading-[0.75] font-medium italic`}>7</div>
+          <div className={`${fraunces.className} text-[120px] sm:text-[160px] leading-[0.75] font-medium italic`}>8</div>
           <h2 id="neurips-title" className={`${fraunces.className} mt-4 text-[26px] sm:text-[30px] leading-[1.1] font-medium`}>
             Acceptances at <span className="italic">NeurIPS Workshop 2026</span>
           </h2>
