@@ -23,12 +23,98 @@ const ACCEPTANCES = [
   { workshop: "SLMs for Agentic Systems", domain: "Small Language Models" },
   { workshop: "VeriCodeGen: AI for Verifiable Coding", domain: "Computer Vision" },
   { workshop: "New in ML", domain: "Physics-Informed ML" },
+  { workshop: "Long-Context Foundation Models", domain: "LLM Inference" },
+  { workshop: "Africa in AI", domain: "Scientific ML · Energy" },
 ];
 
 const SUMMARY =
-  "Spanning reinforcement learning, AI agents, Scientific ML, physics-informed AI with simulations, small language models, and computer vision.";
+  "Spanning reinforcement learning, AI agents, Scientific ML, physics-informed AI with simulations, small language models, computer vision, LLM inference, and energy systems.";
 
 /* ─── Shared bits ─── */
+
+const CONFETTI_COLORS = ["#1B56FD", "#5B8AFF", "#D9B866", "#FF6B6B", "#3DDC97", "#FFFFFF"];
+
+// Deterministic pseudo-random so server/client renders agree.
+const CONFETTI = Array.from({ length: 48 }, (_, i) => {
+  const r = (n: number) => ((Math.sin(i * 97.13 + n * 13.7) + 1) / 2);
+  return {
+    left: r(1) * 100,
+    drift: (r(2) - 0.5) * 160,
+    rotate: (r(3) - 0.5) * 720,
+    delay: r(4) * 0.6,
+    duration: 2.2 + r(5) * 1.6,
+    w: 5 + r(6) * 6,
+    h: r(7) > 0.5 ? 10 + r(8) * 6 : 5 + r(8) * 4,
+    round: r(9) > 0.7,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  };
+});
+
+// One-shot confetti fall over the card to mark the double-digit milestone.
+function Confetti() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden" aria-hidden>
+      {CONFETTI.map((c, i) => (
+        <motion.span
+          key={i}
+          className="absolute top-0 block"
+          style={{
+            left: `${c.left}%`,
+            width: c.w,
+            height: c.h,
+            background: c.color,
+            borderRadius: c.round ? "9999px" : "1px",
+          }}
+          initial={{ y: -30, x: 0, rotate: 0, opacity: 1 }}
+          animate={{ y: 720, x: c.drift, rotate: c.rotate, opacity: [1, 1, 0] }}
+          transition={{ delay: 0.5 + c.delay, duration: c.duration, ease: "easeIn" }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Spray-paint style scribble ring + tag around the big numeral.
+function MilestoneGraffiti() {
+  return (
+    <>
+      <svg
+        viewBox="0 0 260 170"
+        className="pointer-events-none absolute -left-6 -top-7 h-[150px] w-[230px] sm:-top-8 sm:h-[195px] sm:w-[300px]"
+        aria-hidden
+      >
+        <motion.path
+          d="M40 92 C38 40 120 14 186 30 C238 44 244 110 198 138 C150 166 62 160 38 118 C26 96 44 66 78 52"
+          fill="none"
+          stroke="#D9B866"
+          strokeWidth="4"
+          strokeLinecap="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ delay: 0.7, duration: 0.9, ease: "easeInOut" }}
+        />
+        <motion.path
+          d="M206 22 l10 -14 M220 32 l16 -8 M224 48 l16 0"
+          fill="none"
+          stroke="#D9B866"
+          strokeWidth="3"
+          strokeLinecap="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ delay: 1.5, duration: 0.4 }}
+        />
+      </svg>
+      <motion.span
+        className="absolute -top-6 left-[150px] rotate-[-8deg] rounded-sm bg-[#D9B866] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0A0E2A] shadow-md sm:left-[190px]"
+        initial={{ scale: 0, rotate: -30 }}
+        animate={{ scale: 1, rotate: -8 }}
+        transition={{ delay: 1.6, type: "spring", stiffness: 320, damping: 14 }}
+      >
+        Double digits!
+      </motion.span>
+    </>
+  );
+}
 
 function NeurIPSLogo({ height }: { height: number }) {
   return (
@@ -144,7 +230,10 @@ function CoverCard({ onClose }: { onClose: () => void }) {
           <div className="mt-8 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/60">Announcement</div>
         </div>
         <div className="relative my-8 sm:my-0">
-          <div className={`${fraunces.className} text-[120px] sm:text-[160px] leading-[0.75] font-medium italic`}>8</div>
+          <div className={`${fraunces.className} relative text-[120px] sm:text-[160px] leading-[0.75] font-medium italic`}>
+            <MilestoneGraffiti />
+            <span className="relative">10</span>
+          </div>
           <h2 id="neurips-title" className={`${fraunces.className} mt-4 text-[26px] sm:text-[30px] leading-[1.1] font-medium`}>
             Acceptances at <span className="italic">NeurIPS Workshop 2026</span>
           </h2>
@@ -296,6 +385,7 @@ export default function NeurIPSAnnouncement() {
               </button>
 
               <CoverCard onClose={close} />
+              <Confetti />
             </div>
           </motion.div>
         </motion.div>
