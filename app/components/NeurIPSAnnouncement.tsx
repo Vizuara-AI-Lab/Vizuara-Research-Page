@@ -74,48 +74,6 @@ function Confetti() {
   );
 }
 
-// Spray-paint style scribble ring + tag around the big numeral.
-function MilestoneGraffiti() {
-  return (
-    <>
-      <svg
-        viewBox="0 0 260 170"
-        className="pointer-events-none absolute -left-6 -top-7 h-[150px] w-[230px] sm:-top-8 sm:h-[195px] sm:w-[300px]"
-        aria-hidden
-      >
-        <motion.path
-          d="M40 92 C38 40 120 14 186 30 C238 44 244 110 198 138 C150 166 62 160 38 118 C26 96 44 66 78 52"
-          fill="none"
-          stroke="#D9B866"
-          strokeWidth="4"
-          strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ delay: 0.7, duration: 0.9, ease: "easeInOut" }}
-        />
-        <motion.path
-          d="M206 22 l10 -14 M220 32 l16 -8 M224 48 l16 0"
-          fill="none"
-          stroke="#D9B866"
-          strokeWidth="3"
-          strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ delay: 1.5, duration: 0.4 }}
-        />
-      </svg>
-      <motion.span
-        className="absolute -top-6 left-[150px] rotate-[-8deg] rounded-sm bg-[#D9B866] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0A0E2A] shadow-md sm:left-[190px]"
-        initial={{ scale: 0, rotate: -30 }}
-        animate={{ scale: 1, rotate: -8 }}
-        transition={{ delay: 1.6, type: "spring", stiffness: 320, damping: 14 }}
-      >
-        Double digits!
-      </motion.span>
-    </>
-  );
-}
-
 function NeurIPSLogo({ height }: { height: number }) {
   return (
     <span className="inline-flex rounded-md bg-white px-3 py-1.5 shadow-sm">
@@ -230,10 +188,7 @@ function CoverCard({ onClose }: { onClose: () => void }) {
           <div className="mt-8 text-[10px] font-semibold uppercase tracking-[0.28em] text-white/60">Announcement</div>
         </div>
         <div className="relative my-8 sm:my-0">
-          <div className={`${fraunces.className} relative text-[120px] sm:text-[160px] leading-[0.75] font-medium italic`}>
-            <MilestoneGraffiti />
-            <span className="relative">10</span>
-          </div>
+          <div className={`${fraunces.className} text-[120px] sm:text-[160px] leading-[0.75] font-medium italic`}>10</div>
           <h2 id="neurips-title" className={`${fraunces.className} mt-4 text-[26px] sm:text-[30px] leading-[1.1] font-medium`}>
             Acceptances at <span className="italic">NeurIPS Workshop 2026</span>
           </h2>
@@ -243,17 +198,17 @@ function CoverCard({ onClose }: { onClose: () => void }) {
         </div>
       </div>
 
-      <div className="neurips-paper flex flex-col px-6 py-8 sm:px-9 sm:py-10">
+      <div className="neurips-paper flex flex-col px-6 py-8 sm:px-9 sm:py-7">
         <div className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-[0.28em] text-[color:var(--paper-muted)]">
           Vizuara Research
         </div>
-        <p className="mt-3 text-sm leading-relaxed text-[color:var(--paper-muted)]">{SUMMARY}</p>
+        <p className="mt-2.5 text-sm leading-relaxed text-[color:var(--paper-muted)]">{SUMMARY}</p>
 
-        <ol className="mt-5 flex-1">
+        <ol className="mt-4 flex-1 sm:mt-3">
           {ACCEPTANCES.map((a, i) => (
             <motion.li
               key={a.workshop}
-              className="neurips-row flex items-baseline gap-3 py-2.5"
+              className="neurips-row flex items-baseline gap-3 py-2.5 sm:py-[7px]"
               initial={{ opacity: 0, x: 8 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 + i * 0.05, duration: 0.4 }}
@@ -267,10 +222,10 @@ function CoverCard({ onClose }: { onClose: () => void }) {
           ))}
         </ol>
 
-        <p className={`${fraunces.className} mt-5 text-[15px] italic text-[color:var(--paper-muted)]`}>
+        <p className={`${fraunces.className} mt-5 text-[15px] italic text-[color:var(--paper-muted)] sm:mt-4`}>
           Congratulations to all our authors.
         </p>
-        <div className="mt-5">
+        <div className="mt-5 sm:mt-4">
           <Actions onClose={onClose} />
         </div>
       </div>
