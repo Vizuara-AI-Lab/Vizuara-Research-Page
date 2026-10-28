@@ -5,15 +5,21 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 
 const ANNOUNCEMENTS = [
-  { text: "10 papers accepted at NeurIPS 2026 Workshops", href: "/publications" },
-  { text: "“No-Three-in-Line Problem” accepted in Frontiers in AI", href: "/publications" },
+  { text: "10 papers accepted at NeurIPS 2026 Workshops", href: "/publications", opensDetails: true },
+  { text: "“No-Three-in-Line Problem” accepted in Frontiers in AI", href: "/publications", opensDetails: false },
 ];
 
 const ROTATE_MS = 4500;
 
 // Slim highlight strip above the navbar. Rotates through ANNOUNCEMENTS;
 // the parent decides when it is shown and handles dismissal.
-export default function AnnouncementBanner({ onClose }: { onClose: () => void }) {
+export default function AnnouncementBanner({
+  onClose,
+  onOpenDetails,
+}: {
+  onClose: () => void;
+  onOpenDetails: () => void;
+}) {
   const [index, setIndex] = useState(0);
 
   useEffect(() => {
@@ -38,6 +44,11 @@ export default function AnnouncementBanner({ onClose }: { onClose: () => void })
           <motion.a
             key={index}
             href={item.href}
+            onClick={(e) => {
+              if (!item.opensDetails) return;
+              e.preventDefault();
+              onOpenDetails();
+            }}
             className="group flex min-w-0 items-center gap-2.5"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}

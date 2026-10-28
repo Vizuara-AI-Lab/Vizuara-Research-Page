@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
 import AnnouncementBanner from "./AnnouncementBanner";
+import NeurIPSAnnouncement from "./NeurIPSAnnouncement";
 
 const BANNER_KEY = "vizuara-banner-oct26-dismissed";
 
@@ -22,6 +23,7 @@ export default function TopNavbar() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(true);
+  const [neuripsOpen, setNeuripsOpen] = useState(false);
 
   // Read the dismissal flag after mount (localStorage is client-only), then slide the banner in.
   useEffect(() => {
@@ -63,7 +65,7 @@ export default function TopNavbar() {
           transition={{ duration: 0.25 }}
           className="overflow-hidden"
         >
-          <AnnouncementBanner onClose={dismissBanner} />
+          <AnnouncementBanner onClose={dismissBanner} onOpenDetails={() => setNeuripsOpen(true)} />
         </motion.div>
       )}
     </AnimatePresence>
@@ -145,6 +147,7 @@ export default function TopNavbar() {
         )}
       </AnimatePresence>
     </nav>
+    <NeurIPSAnnouncement open={neuripsOpen} onClose={() => setNeuripsOpen(false)} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Fraunces } from "next/font/google";
 import { X, ArrowRight, MapPin } from "lucide-react";
@@ -11,8 +11,6 @@ const fraunces = Fraunces({
   weight: ["400", "500", "600"],
   display: "swap",
 });
-
-const STORAGE_KEY = "vizuara-neurips26-announcement-seen";
 
 const ACCEPTANCES = [
   { workshop: "Reliable Evaluation for Language Models", domain: "RL Evaluation" },
@@ -235,27 +233,8 @@ function CoverCard({ onClose }: { onClose: () => void }) {
 
 /* ─── Shell ─── */
 
-export default function NeurIPSAnnouncement() {
-  const [open, setOpen] = useState(false);
-
-  // Show once per browser session, shortly after the hero has painted.
-  useEffect(() => {
-    let seen = false;
-    try {
-      seen = sessionStorage.getItem(STORAGE_KEY) === "1";
-    } catch {}
-    if (seen) return;
-    const t = setTimeout(() => setOpen(true), 900);
-    return () => clearTimeout(t);
-  }, []);
-
-  const close = useCallback(() => {
-    setOpen(false);
-    try {
-      sessionStorage.setItem(STORAGE_KEY, "1");
-    } catch {}
-  }, []);
-
+// Controlled by the parent (opened from the announcement banner).
+export default function NeurIPSAnnouncement({ open, onClose: close }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
