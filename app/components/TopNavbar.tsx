@@ -5,6 +5,9 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeToggle from "./ThemeToggle";
+import AnnouncementBanner from "./AnnouncementBanner";
+
+const BANNER_KEY = "vizuara-banner-oct26-dismissed";
 
 const nav = [
   { label: "Team", href: "/team" },
@@ -18,6 +21,28 @@ export default function TopNavbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(true);
+
+  // Read the dismissal flag after mount (localStorage is client-only), then slide the banner in.
+  useEffect(() => {
+    let dismissed = false;
+    try {
+      dismissed = localStorage.getItem(BANNER_KEY) === "1";
+    } catch {}
+    if (dismissed) return;
+    const t = setTimeout(() => setBannerDismissed(false), 300);
+    return () => clearTimeout(t);
+  }, []);
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    try {
+      localStorage.setItem(BANNER_KEY, "1");
+    } catch {}
+  };
+
+  // Banner only on the landing page, and it tucks away once the page scrolls.
+  const showBanner = pathname === "/" && !bannerDismissed && !scrolled;
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -28,8 +53,22 @@ export default function TopNavbar() {
   if (pathname?.startsWith("/admin")) return null;
 
   return (
+    <div className="fixed top-0 left-0 right-0 z-50">
+    <AnimatePresence initial={false}>
+      {showBanner && (
+        <motion.div
+          initial={{ height: 0 }}
+          animate={{ height: "auto" }}
+          exit={{ height: 0 }}
+          transition={{ duration: 0.25 }}
+          className="overflow-hidden"
+        >
+          <AnnouncementBanner onClose={dismissBanner} />
+        </motion.div>
+      )}
+    </AnimatePresence>
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`transition-all duration-300 ${
         scrolled
           ? "h-14 bg-bg/60 backdrop-blur-xl border-b border-border/60 shadow-sm"
           : "h-16 bg-transparent"
@@ -106,5 +145,6 @@ export default function TopNavbar() {
         )}
       </AnimatePresence>
     </nav>
+    </div>
   );
 }

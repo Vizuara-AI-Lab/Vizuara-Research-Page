@@ -3,7 +3,6 @@
 import AnimatedSection from "./AnimatedSection";
 import AnimatedCounter from "./AnimatedCounter";
 import GlassHero from "./GlassHero";
-import NeurIPSAnnouncement from "./NeurIPSAnnouncement";
 import BootcampShaderCards from "./BootcampShaderCards";
 import ResearchAreasGrid from "./ResearchAreasGrid";
 import TestimonialsSection from "./TestimonialsSection";
@@ -65,7 +64,6 @@ export default function LandingPage() {
 
       {/* ══════ HERO ══════ */}
       <GlassHero />
-      <NeurIPSAnnouncement />
 
       {/* ══════ FEATURED PAPERS (right after hero) ══════ */}
       <section id="publications" className="py-28 scroll-mt-16 bg-surface">
